@@ -13,4 +13,5 @@ jobs:
       - uses: rhysd/action-setup-vim@v1
         with:
           version: stable
+          neovim: true
       - run: make test
