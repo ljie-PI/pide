@@ -1,0 +1,56 @@
+*pide.txt*  An agentic IDE experience inside Neovim
+
+Author: Jie Liu
+License: MIT
+
+==============================================================================
+CONTENTS                                                       *pide-contents*
+
+1. Introduction ............................................... |pide-intro|
+2. Commands ................................................... |pide-commands|
+3. Configuration .............................................. |pide-config|
+
+==============================================================================
+INTRODUCTION                                                     *pide-intro*
+
+Pide embeds an interactive coding-agent CLI in a Neovim terminal. The default
+agent is `claude`. Install and authenticate the agent CLI before using Pide.
+
+==============================================================================
+COMMANDS                                                      *pide-commands*
+
+:Pide                                                                  *:Pide*
+    Toggle the agent window. The process remains alive when hidden.
+
+:PideAsk [prompt]                                                  *:PideAsk*
+    Send a prompt to the agent. If omitted, ask for input interactively.
+
+:'<,'>PideSendSelection [instruction]                    *:PideSendSelection*
+    Send the selected lines with their relative file path, line range, and
+    filetype. The optional instruction defaults to a general help request.
+
+:PideClose                                                        *:PideClose*
+    Stop the agent process and close its window.
+
+==============================================================================
+CONFIGURATION                                                    *pide-config*
+
+Call setup only to override the defaults: >lua
+
+    require("pide").setup({
+      agent = {
+        command = { "claude" },
+        cwd = nil,
+      },
+      ui = {
+        position = "right",
+        width = 0.35,
+        height = 0.30,
+      },
+    })
+<
+`agent.command` may be a string or list. `agent.cwd` may be a string, function,
+or nil. `position` accepts "right", "left", "bottom", or "top". Width and
+height values <= 1 are fractions; larger values are absolute sizes.
+
+vim:tw=78:ts=8:noet:ft=help:norl:
