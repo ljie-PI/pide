@@ -1,0 +1,3049 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>pide.nvim — Neovim 交互规格原型（Rosé Pine Moon）</title>
+<style>
+  /* Authentic Rosé Pine Moon Palette (rosepinetheme.com) */
+  :root {
+    --canvas: #191726;
+    --base: #232136;
+    --surface: #2a273f;
+    --overlay: #393552;
+    --hl-low: #2a283e;
+    --hl-med: #44415a;
+    --hl-high: #56526e;
+    --muted: #6e6a86;
+    --subtle: #908caa;
+    --text: #e0def4;
+    --love: #eb6f92;
+    --gold: #f6c177;
+    --rose: #ea9a97;
+    --pine: #3e8fb0;
+    --foam: #9ccfd8;
+    --iris: #c4a7e7;
+    --diff-add: rgba(156, 207, 216, 0.13);
+    --diff-del: rgba(235, 111, 146, 0.14);
+    --mono: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--canvas);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  button, select, input, textarea {
+    font-family: inherit;
+    font-size: 12px;
+    color: var(--text);
+  }
+
+  .page {
+    max-width: 1460px;
+    margin: 0 auto;
+    padding: 14px 18px 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  /* Outer Prototype Shell */
+  .proto-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 14px;
+    background: var(--base);
+    border: 1px solid var(--hl-med);
+    border-radius: 9px;
+  }
+  .proto-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .logo {
+    font-family: var(--mono);
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 5px;
+    background: rgba(234, 154, 151, 0.16);
+    color: var(--rose);
+    border: 1px solid rgba(234, 154, 151, 0.4);
+  }
+  .proto-right {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    background: var(--surface);
+    border: 1px solid var(--hl-med);
+    padding: 4px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    color: var(--text);
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: background 0.12s, border-color 0.12s;
+    white-space: nowrap;
+  }
+  .btn:hover { background: var(--overlay); border-color: var(--hl-high); }
+  .btn.active { background: rgba(196, 167, 231, 0.2); border-color: var(--iris); color: var(--text); }
+  .btn-primary { background: rgba(156, 207, 216, 0.18); border-color: var(--foam); color: var(--text); font-weight: 600; }
+  .btn-rose { background: rgba(234, 154, 151, 0.18); border-color: var(--rose); color: var(--rose); font-weight: 600; }
+  .btn-stop { background: rgba(235, 111, 146, 0.16); border-color: rgba(235, 111, 146, 0.5); color: var(--love); }
+  .btn-quiet { background: transparent; border-color: transparent; color: var(--subtle); padding: 2px 6px; }
+  .btn-quiet:hover { background: var(--overlay); color: var(--text); border-color: var(--hl-med); }
+  .btn-xs { padding: 2px 7px; font-size: 11px; border-radius: 4px; }
+
+  kbd {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    padding: 1px 5px;
+    border-radius: 3px;
+    background: var(--surface);
+    border: 1px solid var(--hl-high);
+    color: var(--foam);
+  }
+
+  /* 3 Core Workflow Cards */
+  .loop-bar {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+  }
+  @media (max-width: 980px) { .loop-bar { grid-template-columns: 1fr; } }
+  .loop-card {
+    background: var(--base);
+    border: 1px solid var(--hl-med);
+    border-radius: 8px;
+    padding: 9px 12px;
+    cursor: pointer;
+    transition: border-color 0.14s, background 0.14s;
+  }
+  .loop-card:hover { background: var(--surface); border-color: var(--hl-high); }
+  .loop-card.active { border-color: var(--rose); background: rgba(234, 154, 151, 0.08); }
+  .loop-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-weight: 600;
+    font-size: 12.5px;
+    margin-bottom: 3px;
+  }
+  .loop-steps { color: var(--subtle); font-size: 11.5px; }
+
+  /* Main Area + Collapsible Debug Drawer */
+  .work-area {
+    display: flex;
+    gap: 12px;
+    align-items: stretch;
+  }
+  .nvim-wrap {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .debug-drawer {
+    width: 340px;
+    flex-shrink: 0;
+    background: var(--base);
+    border: 1px solid var(--hl-med);
+    border-radius: 9px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    font-size: 12px;
+  }
+  @media (max-width: 1160px) {
+    .work-area { flex-direction: column; }
+    .debug-drawer { width: 100%; }
+  }
+
+  /* ==================== ROSÉ PINE MOON NEOVIM TUI ==================== */
+  .nvim-tui {
+    width: 100%;
+    background: var(--base);
+    border: 1px solid var(--hl-med);
+    border-radius: 8px;
+    overflow: hidden;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    position: relative;
+    box-shadow: 0 18px 42px rgba(10, 9, 18, 0.55);
+    transition: max-width 0.18s ease;
+  }
+
+  .tui-tabline {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #1d1b2d;
+    border-bottom: 1px solid var(--hl-med);
+    font-size: 11.5px;
+    user-select: none;
+  }
+  .tui-tabs { display: flex; overflow-x: auto; }
+  .tui-tab {
+    padding: 5px 13px;
+    color: var(--muted);
+    border-right: 1px solid var(--hl-med);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+  }
+  .tui-tab.active {
+    background: var(--base);
+    color: var(--text);
+    border-top: 2px solid var(--rose);
+  }
+  .tui-tabline-right {
+    padding: 0 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--subtle);
+    font-size: 11px;
+    white-space: nowrap;
+  }
+
+  .tui-middle {
+    display: flex;
+    height: 476px;
+    min-height: 420px;
+  }
+
+  .tui-win {
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--hl-med);
+    min-width: 0;
+    background: var(--base);
+  }
+  .tui-win:last-child { border-right: none; }
+  .tui-win.focused > .tui-winbar {
+    background: var(--overlay);
+    color: var(--text);
+    border-bottom-color: var(--iris);
+  }
+
+  .tui-winbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 4px 10px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--hl-med);
+    color: var(--subtle);
+    font-size: 11.5px;
+    user-select: none;
+    flex-shrink: 0;
+  }
+  .tui-win-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 6px 0;
+  }
+
+  .win-nav {
+    width: 215px;
+    flex-shrink: 0;
+    background: #211f33;
+  }
+
+  /* Code & Dual-Side Diff Lines */
+  .cline {
+    display: grid;
+    grid-template-columns: 20px 32px minmax(0, 1fr);
+    align-items: baseline;
+    padding: 1px 10px 1px 4px;
+    line-height: 1.62;
+    cursor: text;
+  }
+  .cline.cursor { background: var(--hl-low); }
+  .cline.focused-cursor { background: rgba(68, 65, 90, 0.55); }
+  .cline.visual { background: rgba(196, 167, 231, 0.22); }
+  .cline.diff-add { background: var(--diff-add); }
+  .cline.diff-del { background: var(--diff-del); }
+  .csign { text-align: center; font-size: 11px; user-select: none; }
+  .clnum { text-align: right; padding-right: 10px; color: var(--muted); user-select: none; font-size: 11.5px; }
+  .ctext { white-space: pre; overflow-x: auto; }
+  .virt-eol {
+    margin-left: 14px;
+    font-family: var(--sans);
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .virt-eol.warn { color: var(--gold); }
+
+  /* Inline Current-Line Comment Card */
+  .inline-card {
+    margin: 3px 14px 6px 52px;
+    padding: 6px 10px;
+    border-radius: 5px;
+    background: var(--surface);
+    border-left: 2.5px solid var(--iris);
+    font-family: var(--sans);
+    font-size: 12px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .inline-card.outdated {
+    border-left-color: var(--gold);
+    background: rgba(246, 193, 119, 0.09);
+  }
+  .inline-card.resolved {
+    border-left-color: var(--pine);
+    opacity: 0.84;
+  }
+
+  /* Right Agent Dock */
+  .win-dock {
+    width: 356px;
+    flex-shrink: 0;
+    background: #211f33;
+  }
+  .dock-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--hl-med);
+    background: #1d1b2d;
+    font-family: var(--sans);
+    font-size: 11.5px;
+  }
+  .dock-tab {
+    flex: 1;
+    text-align: center;
+    padding: 5px 4px;
+    color: var(--muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+  }
+  .dock-tab.active {
+    color: var(--text);
+    border-bottom-color: var(--rose);
+    font-weight: 600;
+  }
+
+  /* Plugin Buffer Read-Only List Rows */
+  .vlist-row {
+    padding: 5px 10px;
+    font-family: var(--sans);
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    cursor: pointer;
+    border-left: 2px solid transparent;
+  }
+  .vlist-row:hover { background: var(--hl-low); }
+  .vlist-row.selected {
+    background: rgba(196, 167, 231, 0.15);
+    border-left-color: var(--iris);
+  }
+
+  .chat-item {
+    padding: 7px 11px;
+    border-bottom: 1px solid rgba(68, 65, 90, 0.55);
+    font-family: var(--sans);
+    font-size: 12px;
+  }
+  .chat-role {
+    font-size: 10.5px;
+    color: var(--muted);
+    margin-bottom: 2px;
+    display: flex;
+    justify-content: space-between;
+  }
+  .file-ref {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--foam);
+    cursor: pointer;
+    text-decoration: underline;
+  }
+
+  .dock-queue-strip {
+    padding: 4px 9px;
+    background: rgba(156, 207, 216, 0.09);
+    border-top: 1px solid var(--hl-med);
+    font-family: var(--sans);
+    font-size: 11.5px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+  }
+  .dock-queue-text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--subtle);
+  }
+
+  .composer {
+    border-top: 1px solid var(--hl-med);
+    padding: 7px 9px;
+    background: #1d1b2d;
+    font-family: var(--sans);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    position: relative;
+  }
+  .composer textarea {
+    width: 100%;
+    min-height: 42px;
+    max-height: 96px;
+    resize: vertical;
+    background: var(--base);
+    border: 1px solid var(--hl-med);
+    border-radius: 5px;
+    padding: 5px 8px;
+    font-size: 12px;
+  }
+  .composer textarea:focus {
+    outline: none;
+    border-color: var(--iris);
+  }
+  .composer-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+  }
+  .menu-pop {
+    position: absolute;
+    right: 8px;
+    bottom: 36px;
+    background: var(--overlay);
+    border: 1px solid var(--hl-high);
+    border-radius: 6px;
+    padding: 4px;
+    box-shadow: 0 12px 28px rgba(10, 9, 18, 0.68);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    z-index: 15;
+    min-width: 185px;
+  }
+  .menu-pop button {
+    background: transparent;
+    border: none;
+    text-align: left;
+    padding: 5px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 11.5px;
+  }
+  .menu-pop button:hover { background: var(--hl-med); }
+
+  /* Optional Bottom Shelf */
+  .tui-shelf {
+    height: 176px;
+    border-top: 1px solid var(--hl-med);
+    background: #201e31;
+    display: flex;
+    flex-direction: column;
+  }
+  .shelf-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 10px;
+    background: #1b192a;
+    border-bottom: 1px solid var(--hl-med);
+    font-family: var(--sans);
+    font-size: 11.5px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  /* Statusline & Cmdline */
+  .tui-statusline {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 3px 10px;
+    background: var(--surface);
+    border-top: 1px solid var(--hl-med);
+    font-size: 11.5px;
+    user-select: none;
+    gap: 10px;
+  }
+  .tui-cmdline {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 3px 10px;
+    background: #191726;
+    border-top: 1px solid #232036;
+    font-size: 11.5px;
+    color: var(--subtle);
+    gap: 10px;
+  }
+
+  /* Semantic Tags (Rosé Pine Moon) */
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 0 6px;
+    border-radius: 4px;
+    font-size: 10.5px;
+    font-family: var(--sans);
+    font-weight: 600;
+  }
+  .tag-foam { background: rgba(156, 207, 216, 0.16); color: var(--foam); }
+  .tag-pine { background: rgba(62, 143, 176, 0.22); color: #8ecae6; }
+  .tag-gold { background: rgba(246, 193, 119, 0.18); color: var(--gold); }
+  .tag-rose { background: rgba(234, 154, 151, 0.18); color: var(--rose); }
+  .tag-iris { background: rgba(196, 167, 231, 0.18); color: var(--iris); }
+  .tag-love { background: rgba(235, 111, 146, 0.18); color: var(--love); }
+  .tag-dim { background: rgba(110, 106, 134, 0.2); color: var(--subtle); }
+
+  /* Floating Windows & Scratch Buffer */
+  .tui-overlay {
+    position: absolute;
+    inset: 30px 14px 48px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    z-index: 25;
+  }
+  .nvim-float {
+    pointer-events: auto;
+    width: min(530px, 94%);
+    background: var(--surface);
+    border: 1px solid var(--iris);
+    border-radius: 7px;
+    box-shadow: 0 18px 46px rgba(10, 9, 18, 0.76);
+    padding: 11px 13px;
+    font-family: var(--sans);
+  }
+  .nvim-scratch {
+    pointer-events: auto;
+    width: min(640px, 96%);
+    background: var(--base);
+    border: 1px solid var(--rose);
+    border-radius: 7px;
+    box-shadow: 0 18px 46px rgba(10, 9, 18, 0.8);
+    padding: 11px 13px;
+    font-family: var(--sans);
+  }
+
+  /* Specification Matrix View */
+  .atlas {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+  @media (max-width: 980px) { .atlas { grid-template-columns: 1fr; } }
+  .acard {
+    background: var(--base);
+    border: 1px solid var(--hl-med);
+    border-radius: 9px;
+    padding: 13px 15px;
+  }
+  .acard h3 {
+    margin: 0 0 8px;
+    font-size: 13.5px;
+    color: var(--rose);
+    display: flex;
+    justify-content: space-between;
+  }
+  .pre-diagram {
+    background: #1c1a2b;
+    border: 1px solid var(--hl-med);
+    border-radius: 6px;
+    padding: 9px 11px;
+    font-family: var(--mono);
+    font-size: 11.5px;
+    white-space: pre-wrap;
+    margin: 0;
+    color: var(--text);
+  }
+  table.tbl {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    margin-top: 6px;
+  }
+  table.tbl th, table.tbl td {
+    border: 1px solid var(--hl-med);
+    padding: 5px 8px;
+    text-align: left;
+    vertical-align: top;
+  }
+  table.tbl th { background: var(--surface); }
+
+  .log-box {
+    max-height: 185px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .log-row {
+    padding: 4px 7px;
+    border-radius: 4px;
+    background: var(--surface);
+    border-left: 2.5px solid var(--foam);
+    font-size: 11px;
+  }
+  .log-row.warn { border-left-color: var(--gold); }
+  .log-row.guard { border-left-color: var(--love); }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Outer Prototype Shell Header -->
+  <header class="proto-bar">
+    <div class="proto-left">
+      <span class="logo">pide.nvim</span>
+      <strong>Neovim 交互规格原型 · Rosé Pine Moon</strong>
+      <span style="color:var(--subtle); font-size:12px;">
+        代码区仅用 <kbd>Space</kbd><kbd>a</kbd>…（不污染原生 <kbd>c</kbd>/<kbd>r</kbd>/<kbd>gd</kbd>/<kbd>gt</kbd>）：<kbd>Space</kbd><kbd>ac</kbd> 评论 · <kbd>Space</kbd><kbd>as</kbd> 排队发送 · <kbd>Space</kbd><kbd>ad</kbd> Diff · <kbd>Space</kbd><kbd>al</kbd> 评论架 · <kbd>Space</kbd><kbd>ai</kbd> 聚焦输入 · <kbd>Ctrl+h/l</kbd> 切窗
+      </span>
+    </div>
+    <div class="proto-right">
+      <button id="tabSimBtn" class="btn active" onclick="setPageView('sim')">Neovim 工作界面</button>
+      <button id="tabAtlasBtn" class="btn" onclick="setPageView('atlas')">交互规格表（6 大模块）</button>
+      <button id="debugToggleBtn" class="btn" onclick="toggleDebugDrawer()">调试抽屉: 关</button>
+      <button class="btn btn-xs" onclick="resetAll()">↺ 重置</button>
+    </div>
+  </header>
+
+  <!-- 3 Core User Loops -->
+  <section id="loopStrip" class="loop-bar">
+    <div id="loopCard1" class="loop-card active" onclick="startLoop(1)">
+      <div class="loop-head">
+        <span>闭环 1：代码选区提问（统一默认后续排队）</span>
+        <span class="tag tag-foam">零跳动</span>
+      </div>
+      <div class="loop-steps">
+        <kbd>j</kbd>/<kbd>k</kbd> 移动 → <kbd>v</kbd> 选代码 → <kbd>Space</kbd><kbd>as</kbd> 发送（代码与 Chat 统一默认 Follow-up，<b>不自动开 Shelf、不移焦点</b>）→ <kbd>Space</kbd><kbd>ai</kbd> 随时进输入框
+      </div>
+    </div>
+    <div id="loopCard2" class="loop-card" onclick="startLoop(2)">
+      <div class="loop-head">
+        <span>闭环 2：双侧 Diff Review 与多目标发送</span>
+        <span class="tag tag-rose">Base + Modified</span>
+      </div>
+      <div class="loop-steps">
+        <kbd>Space</kbd><kbd>ad</kbd> 进入 Diff（支持 Base/Modified 双侧锚定评论；窄屏自动收 Dock 转底部 Shelf）→ <kbd>Space</kbd><kbd>al</kbd> 选「发送到：并行子代理 / 当前会话」
+      </div>
+    </div>
+    <div id="loopCard3" class="loop-card" onclick="startLoop(3)">
+      <div class="loop-head">
+        <span>闭环 3：历史分叉、三步合并与视图返回栈</span>
+        <span class="tag tag-iris">栈式返回</span>
+      </div>
+      <div class="loop-steps">
+        <kbd>Space</kbd><kbd>at</kbd> 打开分支树（插件只读 Buffer 内用 <kbd>j</kbd>/<kbd>k</kbd>/<kbd>p</kbd>/<kbd>s</kbd>/<kbd>m</kbd>）→ 进入三步合并 → 按 <kbd>q</kbd> 先退回分支树，再按 <kbd>q</kbd> 回代码
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== MAIN WORKBENCH + OPTIONAL DEBUG DRAWER ==================== -->
+  <main id="simSection" class="work-area">
+    <div class="nvim-wrap">
+      <div id="nvimTui" class="nvim-tui">
+        <div class="tui-tabline">
+          <div id="tuiTabs" class="tui-tabs"></div>
+          <div id="tuiTabRight" class="tui-tabline-right"></div>
+        </div>
+
+        <div id="tuiMiddle" class="tui-middle"></div>
+
+        <div id="tuiShelf" class="tui-shelf hidden"></div>
+
+        <div id="tuiStatusline" class="tui-statusline"></div>
+        <div id="tuiCmdline" class="tui-cmdline"></div>
+
+        <div id="tuiOverlay" class="tui-overlay hidden"></div>
+      </div>
+    </div>
+
+    <!-- Collapsible Debug / Probe Drawer -->
+    <aside id="debugDrawer" class="debug-drawer hidden">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <strong>规格验证探针（非产品常驻 UI）</strong>
+        <span class="tag tag-dim">Rosé Pine Moon</span>
+      </div>
+
+      <div>
+        <div style="color:var(--subtle); font-size:11.5px; margin-bottom:4px;">终端总列宽：<b id="colsLabel">140</b> 列（扣除面板剩余代码宽：<b id="effColsLabel">98</b> 列）</div>
+        <input id="colsSlider" type="range" min="74" max="160" value="140" style="width:100%;" oninput="setTotalCols(Number(this.value))" />
+        <div style="color:var(--muted); font-size:11px;">窄屏 Review 时自动记住并隐藏右侧 Dock，迁入底部 Comments Shelf，避免双处重复展示评论。</div>
+      </div>
+
+      <div style="display:flex; flex-wrap:wrap; gap:5px;">
+        <button class="btn btn-xs" onclick="toggleLeftNav()">左侧导航 (<kbd>Space</kbd><kbd>an</kbd>)</button>
+        <button class="btn btn-xs" onclick="toggleDock()">右侧 Dock (<kbd>Space</kbd><kbd>aa</kbd>)</button>
+        <button class="btn btn-xs" onclick="toggleShelf('comments')">底部 Shelf (<kbd>Space</kbd><kbd>al</kbd>)</button>
+        <button class="btn btn-xs" onclick="openWorkspacePicker()">切工作区 (<kbd>Space</kbd><kbd>aw</kbd>)</button>
+      </div>
+
+      <div style="border-top:1px solid var(--hl-med); padding-top:8px; display:flex; flex-wrap:wrap; gap:5px;">
+        <button class="btn btn-xs" onclick="simulateAgentReplyComments()">模拟 Agent 回复处理中评论 → 待确认</button>
+        <button class="btn btn-xs" onclick="toggleDirty()">切换未保存脏状态 [&amp;modified]</button>
+        <button class="btn btn-xs" onclick="simulateAgentWrite('shift')">模拟插入 2 行 (安静 moved)</button>
+        <button class="btn btn-xs" onclick="simulateAgentWrite('rewrite')">模拟改写锚定行 (告警 outdated)</button>
+        <button class="btn btn-xs" onclick="notifyPendingQuestion()">模拟 Agent 提问 (非抢占提示)</button>
+        <button class="btn btn-xs" onclick="cycleThreadState()">切换会话状态 (运行/空闲/未读)</button>
+        <button class="btn btn-xs" onclick="toggleRunningDefaultPref()">Chat 运行中回车偏好: <span id="enterPrefLabel">Follow-up</span></button>
+        <button class="btn btn-xs" onclick="toggleBackend()">后端: <span id="backendLabel">Pi</span></button>
+      </div>
+
+      <div style="border-top:1px solid var(--hl-med); padding-top:8px;">
+        <div id="debugKv" style="font-family:var(--mono); font-size:11px; color:var(--subtle); line-height:1.6;"></div>
+      </div>
+
+      <div style="border-top:1px solid var(--hl-med); padding-top:8px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+          <span style="color:var(--subtle); font-size:11px;">交互与焦点栈日志</span>
+          <button class="btn btn-xs btn-quiet" onclick="state.logs=[]; render();">清空</button>
+        </div>
+        <div id="debugLogs" class="log-box"></div>
+      </div>
+    </aside>
+  </main>
+
+  <!-- ==================== VIEW 2: SPECIFICATION TABLES (6 MODULES) ==================== -->
+  <section id="atlasSection" class="atlas hidden">
+    <div class="acard">
+      <h3>1. 键位作用域边界（绝不污染原生 Vim 操作符） <span>规格 §18.3, §19.7</span></h3>
+      <table class="tbl">
+        <tr><th>Buffer 类型</th><th>允许的键位形式</th><th>禁止事项与原因</th></tr>
+        <tr><td><strong>可编辑代码 / Diff Buffer</strong></td><td>仅注册 <code>&lt;leader&gt;a…</code> 前缀命令（如 <code>ac</code> 评论、<code>as</code> 发送、<code>ad</code> Diff、<code>ab</code> 切新旧侧、<code>ai</code> 聚焦输入）与窗口跳转 <code>&lt;C-w&gt;h/j/k/l</code></td><td>严禁占用 <code>c/C</code>（修改）、<code>r</code>（替换）、<code>gd</code>（跳定义）、<code>gt</code>（切 Tab）、<code>gq/gw</code>（排版）</td></tr>
+        <tr><td><strong>pide 只读插件 Buffer / 浮窗</strong></td><td>Buffer-local 短键：<code>j/k</code> 移动、<code>Enter</code> 执行、<code>Space</code> 勾选、<code>p</code> 预览、<code>t</code> 发送目标/新 Tab、<code>S</code> 紧急插话发送、<code>r</code> 解决或撤回、<code>d</code> 忽略、<code>q/Esc</code> 栈式返回</td><td>所有浮窗（模型、发送目标、工作区、提问）均完整支持纯键盘闭环</td></tr>
+      </table>
+    </div>
+
+    <div class="acard">
+      <h3>2. 评论派生生命周期与严格状态动作表 <span>规格 §8.2–8.6</span></h3>
+      <pre class="pre-diagram">草稿 (draft) ──发送──▶ 已排队 (sent+queued) ──轮到执行──▶ 处理中 (sent+running) ──收到关联回复──▶ 待确认 (sent+reply) ──▶ 已解决 (resolved)
+   │                        │ (撤回/Stop/Compact)                                                           │                     │
+   └──忽略──▶ 已忽略         └────────────── 统一回退为「草稿」并还原文字+引用                               └──继续追问            └──重开 (保留历史)</pre>
+      <table class="tbl">
+        <tr><th>派生展示状态</th><th>允许动作（禁止跨状态误标“解决”）</th></tr>
+        <tr><td><strong>草稿</strong> / <strong>已忽略</strong></td><td>草稿：<code>发送</code>、<code>编辑</code>、<code>忽略</code>；已忽略：<code>恢复为草稿</code></td></tr>
+        <tr><td><strong>已排队</strong> / <strong>处理中</strong></td><td>已排队：<code>撤回编辑</code>（回退草稿）；处理中：<code>查看目标会话</code>（未回复前不伪造“待确认”）</td></tr>
+        <tr><td><strong>待确认</strong> / <strong>已解决</strong></td><td>待确认：<code>解决</code>、<code>要求继续修改</code>；已解决：<code>重开</code>（保留上下文与历史回复）</td></tr>
+      </table>
+    </div>
+
+    <div class="acard">
+      <h3>3. 双侧 Diff 与窄屏单栏 Base ⇄ Modified 切换 <span>规格 §8.1, §19.4</span></h3>
+      <table class="tbl">
+        <tr><th>场景</th><th>精确窗口行为</th></tr>
+        <tr><td><strong>宽屏 Diff Review</strong></td><td><code>Base (可定位评论) | Modified (可定位评论) | 右侧复用 Dock 切到 Review 页</code>（严格最多三栏）；评论携带 <code>side: base | modified</code></td></tr>
+        <tr><td><strong>窄屏单栏 Diff</strong></td><td>窄屏不是禁用 Base：单栏顶栏提供 <code>Base 旧侧 ⇄ Modified 新侧</code> 切换（及 <code>&lt;leader&gt;ab</code>）；在底部 Shelf 选中 Base 评论时单栏自动切到 Base 并定位上下文，选回 Modified 评论再自动切回 Modified</td></tr>
+      </table>
+    </div>
+
+    <div class="acard">
+      <h3>4. 跨断点边沿响应式迁移与返回栈 <span>规格 §19.4–19.5, §19.7</span></h3>
+      <table class="tbl">
+        <tr><th>机制</th><th>防抖与所有权规则</th></tr>
+        <tr><td><strong>仅跨越断点才迁移</strong></td><td>记录 <code>reviewLastNarrow</code>：同一断点内继续缩放或开关导航栏时，<b>尊重用户手动改过的 Dock / Shelf 开闭状态</b>，绝不强行重开被隐藏的 Dock</td></tr>
+        <tr><td><strong>区分自动与手动 Shelf</strong></td><td>记录 <code>shelfAutoOpenedByNarrow</code>：从窄屏拉回宽屏时，<b>只收起窄屏自动展开的 Shelf</b>（用户主动打开的 Shelf 原样保留），彻底杜绝双评论面板</td></tr>
+        <tr><td><strong>栈式返回</strong></td><td>退出 Review 精确恢复进入前的 Dock 页签与开闭状态；从 <code>Tree → Merge</code> 按 <code>q</code> 优先退回 <code>Tree</code></td></tr>
+      </table>
+    </div>
+
+    <div class="acard">
+      <h3>5. 统一队列排空回滚与系统通道隔离 <span>规格 §7.2, §8.3, §9.3</span></h3>
+      <pre class="pre-diagram">withdrawQueueItem() / stopRunningThread() / runCompact() / submitComposer("interrupt")
+  └── 共用 rollbackQueuedItemsToDraft(items):
+        1. 合并还原未消费文字 + 去重保留全部引用/附件 (refs)
+        2. 将关联未消费评论持久化状态统一回退为 draft（杜绝 Compact 后出现假「处理中」）
+        3. 独立保留 queue.system（后台子代理与后台命令完成通知绝不丢失）</pre>
+    </div>
+
+    <div class="acard">
+      <h3>6. 统一运行中默认队列、多目标与低频评论 Steer <span>规格 §7.2, §8.3, §9.2, §21</span></h3>
+      <table class="tbl">
+        <tr><th>入口</th><th>统一心智模型</th></tr>
+        <tr><td><strong>运行中默认发送</strong></td><td>代码区（<code>&lt;leader&gt;as</code> 弹单行提问框即发并留代码区）与 Chat 输入框（<code>&lt;Enter&gt;</code>）统一默认 <b>Follow-up</b>；<code>Steer</code> 统一作为显式次级动作（<code>&lt;leader&gt;aS</code> / <code>&lt;Alt+Enter&gt;</code>）</td></tr>
+        <tr><td><strong>单条与批量目标防串台</strong></td><td>行内单条评论固定发给<b>当前活跃会话</b>（写明会话名，不继承批量目标）；评论架批量发送显示 <code>发送已勾选 (N) → 目标</code>（<code>N = 0</code> 禁发）；并行子代理结果直接接入合并页且 <code>0</code> 来源禁止创建新会话</td></tr>
+        <tr><td><strong>工作区隔离与非抢占提问</strong></td><td>每个 Workspace 独立持有评论、多会话列表与各自队列（切换互不串台、后台任务不断）；AI 普通提问先在状态栏/Dock 非抢占提示，按 <code>&lt;leader&gt;ar</code> 或点击才开对比浮窗</td></tr>
+      </table>
+    </div>
+  </section>
+
+</div>
+
+<script>
+const WORKSPACES = {
+  auth: {
+    id: "auth",
+    name: "feat/auth",
+    kind: "隔离分支 worktree",
+    file: "lua/auth/jwt.lua",
+    verified: true,
+    planStep: "Step 2/3 · 校验过期与时钟容差",
+    baseLines: [
+      "local M = {}",
+      "",
+      "function M.verify_token(header, opts)",
+      "  if not header then return nil end",
+      "  local token = header:sub(8)",
+      "  if token == '' then return nil end",
+      "  local claims = M.decode_jwt(token, opts.secret)",
+      "  return claims",
+      "end",
+      "",
+      "return M"
+    ],
+    lines: [
+      "local M = {}",
+      "",
+      "function M.verify_token(header, opts)",
+      "  if not header or header == '' then",
+      "    return nil, 'missing authorization header'",
+      "  end",
+      "  local token = header:match('^Bearer%s+(.+)$')",
+      "  if not token then",
+      "    return nil, 'malformed bearer scheme'",
+      "  end",
+      "  local claims = M.decode_jwt(token, opts.secret)",
+      "  if claims.exp < os.time() then",
+      "    return nil, 'token expired'",
+      "  end",
+      "  return claims, nil",
+      "end",
+      "",
+      "return M"
+    ]
+  },
+  retry: {
+    id: "retry",
+    name: "fix/retry-backoff",
+    kind: "隔离分支 worktree",
+    file: "lua/net/retry.lua",
+    verified: false,
+    planStep: "Step 1/2 · 指数退避抖动上限",
+    baseLines: [
+      "local M = {}",
+      "function M.next_delay_ms(attempt, base_ms)",
+      "  return base_ms * (2 ^ attempt)",
+      "end",
+      "return M"
+    ],
+    lines: [
+      "local M = {}",
+      "",
+      "function M.next_delay_ms(attempt, base_ms, cap_ms)",
+      "  local exp_delay = math.min(cap_ms, base_ms * (2 ^ attempt))",
+      "  local jitter = math.random(0, math.floor(exp_delay * 0.2))",
+      "  return exp_delay + jitter",
+      "end",
+      "",
+      "return M"
+    ]
+  }
+};
+
+const SEND_TARGETS = [
+  { id: "current", label: "当前会话 · 后续排队（默认）" },
+  { id: "current_steer", label: "当前会话 · 紧急插话 (Steer)", piOnly: true },
+  { id: "new_thread", label: "新建独立会话" },
+  { id: "history_thread", label: "历史会话：重试退避修复" },
+  { id: "subagents", label: "并行子代理（按评论分叉）" }
+];
+
+const MODELS = [
+  { id: "claude-sonnet-4", label: "claude-sonnet-4 · thinking: high" },
+  { id: "claude-opus-4-6", label: "claude-opus-4-6 · thinking: xhigh" },
+  { id: "gpt-5.4", label: "gpt-5.4 · thinking: high" }
+];
+
+let state = {};
+let leaderSeq = ""; // "" | "space" | "space_a"
+let leaderTimer = null;
+
+function createWorkspaceStore() {
+  return {
+    auth: {
+      baseLines: [...WORKSPACES.auth.baseLines],
+      codeLines: [...WORKSPACES.auth.lines],
+      lineOffset: 0,
+      bufferModified: false,
+      cursorLine: 7,
+      baseCursorLine: 5,
+      activeThreadId: "t1",
+      threads: [
+        {
+          id: "t1",
+          title: "鉴权会话 · JWT 校验",
+          status: "running",
+          pendingQuestion: false,
+          composerDraft: "",
+          composerRefs: [],
+          queue: {
+            steering: [],
+            followUp: [
+              { id: "q1", text: "完成后补充过期边界单元测试", refs: ["tests/auth_spec.lua"], commentIds: [] }
+            ],
+            system: [
+              { id: "sys1", text: "子代理 scout 已完成 4 处调用点扫描（独立通道）" }
+            ]
+          },
+          chat: [
+            { role: "你", text: "梳理并加固 verify_token 的边界错误处理。" },
+            { role: "Agent", text: "已定位鉴权入口，正在验证过期与空值分支：", ref: { file: "lua/auth/jwt.lua", line: 12 } }
+          ]
+        },
+        {
+          id: "t2",
+          title: "鉴权副会话 · 旧版兼容排查",
+          status: "idle",
+          pendingQuestion: false,
+          composerDraft: "",
+          composerRefs: [],
+          queue: { steering: [], followUp: [], system: [] },
+          chat: [
+            { role: "你", text: "单独核对旧版移动端请求头格式。" },
+            { role: "Agent", text: "已确认 v1 客户端存在小写 bearer 前缀调用。" }
+          ]
+        }
+      ],
+      comments: [
+        { id: "C-1", side: "modified", line: 7, origLine: 7, selected: true, persisted: "draft", anchor: "anchored", quote: "local token = header:match('^Bearer%s+(.+)$')", text: "是否需要兼容小写 bearer 前缀？", targetLabel: null, reply: null },
+        { id: "C-2", side: "modified", line: 12, origLine: 12, selected: false, persisted: "sent", anchor: "anchored", quote: "if claims.exp < os.time() then", text: "claims.exp 为空时会抛比较错误", targetLabel: "鉴权会话 · JWT 校验", reply: "已加入 type(claims.exp) == 'number' 校验并跑通单测" },
+        { id: "C-3", side: "base", line: 5, origLine: 5, selected: true, persisted: "draft", anchor: "anchored", quote: "local token = header:sub(8)", text: "旧实现硬编码截取第 8 位，正是多空格 bug 根源", targetLabel: null, reply: null }
+      ],
+      mergeSources: [
+        { id: "s1", checked: true, name: "鉴权会话 · Bearer 与过期校验", note: "提供基础实现与单测证据" },
+        { id: "s2", checked: true, name: "鉴权副会话 · 旧版兼容排查", note: "确认兼容小写前缀不影响吊销逻辑" },
+        { id: "s3", checked: false, name: "历史分支 · 双 Header 过渡方案", note: "与严格规范冲突，默认排除" }
+      ],
+      mergeSummary: "## 合并结论摘要\n- 保留 nil, err 返回风格\n- 采纳大小写无关 Bearer 匹配 + 30s leeway\n- 源会话历史保持只读不变"
+    },
+    retry: {
+      baseLines: [...WORKSPACES.retry.baseLines],
+      codeLines: [...WORKSPACES.retry.lines],
+      lineOffset: 0,
+      bufferModified: false,
+      cursorLine: 4,
+      baseCursorLine: 2,
+      activeThreadId: "rt1",
+      threads: [
+        {
+          id: "rt1",
+          title: "重试会话 · 退避抖动",
+          status: "idle",
+          pendingQuestion: false,
+          composerDraft: "",
+          composerRefs: [],
+          queue: { steering: [], followUp: [], system: [] },
+          chat: [
+            { role: "你", text: "检查指数退避在高并发下的惊群风险。" },
+            { role: "Agent", text: "当前 jitter 为 20%，建议确认随机数种子与 cap_ms 边界：", ref: { file: "lua/net/retry.lua", line: 5 } }
+          ]
+        }
+      ],
+      comments: [
+        { id: "R-1", side: "modified", line: 5, origLine: 5, selected: true, persisted: "draft", anchor: "anchored", quote: "local jitter = math.random(0, math.floor(exp_delay * 0.2))", text: "math.random 未播种时多 worker 重试抖动是否同步？", targetLabel: null, reply: null }
+      ],
+      mergeSources: [
+        { id: "rs1", checked: true, name: "重试会话 · 指数退避上限分析", note: "确认 cap_ms 防止指数溢出" }
+      ],
+      mergeSummary: "## 重试工作区合并摘要\n- 统一使用独立随机源计算 20% 抖动\n- 保留 cap_ms 硬上限"
+    }
+  };
+}
+
+function initState() {
+  const core = {
+    pageView: "sim",
+    debugOpen: false,
+    activeLoop: 1,
+    totalCols: 140,
+    backend: "pi", // pi | acp
+    activeModelIdx: 0,
+    runningEnterPref: "followUp", // "followUp" | "steer"
+    composerMenuOpen: false,
+
+    activeTabIdx: 0,
+    tabs: [
+      { id: 1, wsId: "auth", isUserNative: false },
+      { id: 2, wsId: null, isUserNative: true, label: "notes.md (用户独立 Tab)" }
+    ],
+
+    leftNavOpen: false,
+    leftNavKind: "workspaces",
+    leftNavIdx: 0,
+
+    dockOpen: true,
+    dockTab: "chat",
+    dockIdx: 0,
+    preReviewSnapshot: null,
+    reviewLastNarrow: null,
+    shelfAutoOpenedByNarrow: false,
+
+    shelfOpen: false,
+    shelfTab: "comments",
+    shelfIdx: 0,
+    commentTargetId: "current",
+
+    centerMode: "code",
+    viewStack: [],
+    focusedPane: "code",
+
+    diffSide: "modified",
+    visualAnchor: null,
+
+    wsStore: createWorkspaceStore(),
+
+    treeIdx: 1,
+    treePreviewOpen: true,
+    treeNodes: [
+      { id: "n1", depth: 0, title: "梳理 JWT 鉴权现状与 Spec 边界", tag: "起点", summary: "确立返回 nil, err 约定，不抛未捕获异常。" },
+      { id: "n2", depth: 1, title: "实现 Bearer 解析与 exp 校验", tag: "当前节点 ★", summary: "正在执行单测回归，已覆盖空 header 与过期时间。" },
+      { id: "n3", depth: 1, title: "备选探索：中间件统一透传 leeway", tag: "历史分支", summary: "验证 30s 时钟偏移容差与旧客户端兼容。" }
+    ],
+    mergeStep: 1,
+    mergeIdx: 0,
+
+    overlay: null,
+    statusNotice: "就绪 · 代码区按 Space a s 提问发送，Space a c 添加评论（原生 c/r/gd/gt 完整保留给 Vim）",
+    logs: [
+      { kind: "info", text: "初始化完成：各工作区代码、评论与多会话状态独立隔离。" }
+    ]
+  };
+
+  const wsProps = ["baseLines", "codeLines", "lineOffset", "bufferModified", "cursorLine", "baseCursorLine", "comments", "mergeSources", "mergeSummary"];
+  wsProps.forEach(prop => {
+    Object.defineProperty(core, prop, {
+      enumerable: true,
+      get() { return core.wsStore[core.tabs[core.activeTabIdx]?.wsId || "auth"][prop]; },
+      set(v) { core.wsStore[core.tabs[core.activeTabIdx]?.wsId || "auth"][prop] = v; }
+    });
+  });
+
+  const getActiveThread = () => {
+    const wsObj = core.wsStore[core.tabs[core.activeTabIdx]?.wsId || "auth"];
+    return wsObj.threads.find(t => t.id === wsObj.activeThreadId) || wsObj.threads[0];
+  };
+
+  const threadProps = [
+    ["threadStatus", "status"],
+    ["pendingQuestion", "pendingQuestion"],
+    ["composerDraft", "composerDraft"],
+    ["composerRefs", "composerRefs"],
+    ["queue", "queue"],
+    ["chat", "chat"]
+  ];
+  threadProps.forEach(([alias, key]) => {
+    Object.defineProperty(core, alias, {
+      enumerable: true,
+      get() { return getActiveThread()[key]; },
+      set(v) { getActiveThread()[key] = v; }
+    });
+  });
+
+  return core;
+}
+
+function currentWsData() {
+  return state.wsStore[state.tabs[state.activeTabIdx]?.wsId || "auth"];
+}
+
+function currentThread() {
+  const wsData = currentWsData();
+  return wsData.threads.find(t => t.id === wsData.activeThreadId) || wsData.threads[0];
+}
+
+function switchActiveThread(threadId) {
+  const wsData = currentWsData();
+  const target = wsData.threads.find(t => t.id === threadId);
+  if (!target) return;
+  wsData.activeThreadId = target.id;
+  state.statusNotice = `当前发送目标会话已切换为「${target.title}」（各自队列独立）`;
+  render();
+}
+
+function logEvent(kind, text) {
+  state.logs.unshift({ kind, text });
+  if (state.logs.length > 24) state.logs.pop();
+}
+
+function currentWs() {
+  const tab = state.tabs[state.activeTabIdx];
+  return WORKSPACES[tab?.wsId || "auth"];
+}
+
+/* Derived Comment UI Status & Allowed Actions (Review Fix #2) */
+function isCommentQueued(id) {
+  return [...state.queue.steering, ...state.queue.followUp].some(q => (q.commentIds || []).includes(id));
+}
+
+function deriveCommentView(c) {
+  if (c.persisted === "draft") {
+    return { key: "draft", label: "草稿", tagCls: "tag-gold", actions: ["send", "edit", "dismiss"] };
+  }
+  if (c.persisted === "dismissed") {
+    return { key: "dismissed", label: "已忽略", tagCls: "tag-dim", actions: ["restore"] };
+  }
+  if (c.persisted === "resolved") {
+    return { key: "resolved", label: "已解决", tagCls: "tag-pine", actions: ["reopen"] };
+  }
+  // persisted === "sent"
+  if (isCommentQueued(c.id)) {
+    return { key: "queued", label: "已排队", tagCls: "tag-foam", actions: ["withdraw"] };
+  }
+  if (c.reply) {
+    return { key: "pending_ack", label: "待确认", tagCls: "tag-rose", actions: ["resolve", "followup"] };
+  }
+  return { key: "processing", label: "处理中", tagCls: "tag-iris", actions: ["view_thread"] };
+}
+
+function effectiveCodeCols() {
+  const navCols = state.leftNavOpen ? 26 : 0;
+  // In Review mode, measure against having Dock open so threshold doesn't oscillate
+  const dockCols = (state.dockOpen || state.centerMode === "diff") ? 42 : 0;
+  return Math.max(28, state.totalCols - navCols - dockCols);
+}
+
+function isNarrowForReview() {
+  return effectiveCodeCols() < 78;
+}
+
+function syncReviewLayoutForWidth(entering) {
+  if (state.centerMode !== "diff") return;
+  const nowNarrow = isNarrowForReview();
+  // Only migrate Dock/Shelf when entering Review or actually crossing the narrow/wide breakpoint!
+  if (!entering && state.reviewLastNarrow === nowNarrow) {
+    return;
+  }
+  state.reviewLastNarrow = nowNarrow;
+
+  if (nowNarrow) {
+    const wasShelfOpen = state.shelfOpen;
+    state.dockOpen = false;
+    state.shelfOpen = true;
+    state.shelfTab = "comments";
+    state.shelfAutoOpenedByNarrow = !wasShelfOpen;
+    logEvent("warn", "跨越窄屏断点：自动收起右侧 Dock，评论集中到底部 Comments Shelf（单栏仍可切换 Base/Modified）。");
+  } else {
+    state.dockOpen = true;
+    state.dockTab = "review";
+    if (entering) {
+      if (state.preReviewSnapshot && !state.preReviewSnapshot.shelfOpen) {
+        state.shelfOpen = false;
+      }
+      state.shelfAutoOpenedByNarrow = false;
+    } else if (state.shelfAutoOpenedByNarrow) {
+      state.shelfOpen = false;
+      state.shelfAutoOpenedByNarrow = false;
+      logEvent("info", "跨回宽屏断点：自动收起窄屏临时展开的底部 Shelf，恢复右侧 Review Dock 单处评论。");
+    }
+  }
+}
+
+function resetAll() {
+  state = initState();
+  render();
+}
+
+function setPageView(v) {
+  state.pageView = v;
+  document.getElementById("simSection").classList.toggle("hidden", v !== "sim");
+  document.getElementById("loopStrip").classList.toggle("hidden", v !== "sim");
+  document.getElementById("atlasSection").classList.toggle("hidden", v !== "atlas");
+  document.getElementById("tabSimBtn").classList.toggle("active", v === "sim");
+  document.getElementById("tabAtlasBtn").classList.toggle("active", v === "atlas");
+}
+
+function toggleDebugDrawer() {
+  state.debugOpen = !state.debugOpen;
+  document.getElementById("debugDrawer").classList.toggle("hidden", !state.debugOpen);
+  document.getElementById("debugToggleBtn").textContent = `调试抽屉: ${state.debugOpen ? "开" : "关"}`;
+  document.getElementById("debugToggleBtn").classList.toggle("active", state.debugOpen);
+  render();
+}
+
+function setTotalCols(cols) {
+  state.totalCols = cols;
+  const pct = Math.min(100, Math.max(52, Math.round((cols / 140) * 100)));
+  document.getElementById("nvimTui").style.maxWidth = pct === 100 ? "100%" : pct + "%";
+  if (state.centerMode === "diff") {
+    syncReviewLayoutForWidth(false);
+  }
+  render();
+}
+
+/* ==================== 3 CORE END-TO-END LOOPS ==================== */
+function startLoop(n) {
+  state = initState();
+  state.activeLoop = n;
+  if (n === 1) {
+    state.cursorLine = 7;
+    state.visualAnchor = 10;
+    state.statusNotice = "闭环 1：已选 L7–10。按 Space a s 发送（默认安全排入 Follow-up，不弹开底部 Shelf、不移焦点）。";
+  } else if (n === 2) {
+    enterDiffReview();
+    state.statusNotice = "闭环 2：双侧 Diff Review（Ctrl+h/l 切换 Base 与 Modified 两侧均可留评论；Space a l 打开评论架选择「发送到…」）。";
+  } else if (n === 3) {
+    openThreadTree();
+    state.statusNotice = "闭环 3：插件只读分支树（j/k 移动，p 预览，s 派发干净子代理，m 进入合并；按 q 沿视图栈逐层返回）。";
+  }
+  render();
+}
+
+/* ==================== VIEW STACK & NAVIGATION ==================== */
+function pushCenterView(nextMode) {
+  if (state.centerMode !== nextMode) {
+    state.viewStack.push({
+      centerMode: state.centerMode,
+      dockOpen: state.dockOpen,
+      dockTab: state.dockTab,
+      shelfOpen: state.shelfOpen,
+      shelfTab: state.shelfTab
+    });
+    state.centerMode = nextMode;
+  }
+}
+
+function popCenterView() {
+  if (state.centerMode === "diff" && state.preReviewSnapshot) {
+    const snap = state.preReviewSnapshot;
+    state.preReviewSnapshot = null;
+    state.reviewLastNarrow = null;
+    state.shelfAutoOpenedByNarrow = false;
+    state.centerMode = "code";
+    state.dockOpen = snap.dockOpen;
+    state.dockTab = snap.dockTab;
+    state.shelfOpen = snap.shelfOpen;
+    state.shelfTab = snap.shelfTab;
+    state.viewStack = [];
+    state.focusedPane = "code";
+    state.statusNotice = `已退出 Diff Review · 已恢复此前 Dock 页签 [${snap.dockTab}] 与窗口状态`;
+    logEvent("info", `退出 Review：精确恢复进入前 Dock 状态 (open=${snap.dockOpen}, tab=${snap.dockTab})。`);
+    render();
+    return;
+  }
+
+  const prev = state.viewStack.pop();
+  if (prev) {
+    state.centerMode = prev.centerMode;
+    state.focusedPane = "code";
+    state.statusNotice = `已返回上一视图 [${prev.centerMode}]`;
+    logEvent("info", `栈式返回 → ${prev.centerMode}。`);
+  } else {
+    state.centerMode = "code";
+    state.focusedPane = "code";
+  }
+  render();
+}
+
+function enterDiffReview() {
+  if (state.centerMode === "diff") {
+    popCenterView();
+    return;
+  }
+  state.preReviewSnapshot = {
+    dockOpen: state.dockOpen,
+    dockTab: state.dockTab,
+    shelfOpen: state.shelfOpen,
+    shelfTab: state.shelfTab
+  };
+  state.centerMode = "diff";
+  state.focusedPane = "code";
+  syncReviewLayoutForWidth(true);
+  logEvent("info", `进入双侧 Diff Review（已记录原 Dock 页签 [${state.preReviewSnapshot.dockTab}] 以便退出时恢复）。`);
+  render();
+}
+
+function openThreadTree() {
+  if (state.backend === "acp") {
+    state.statusNotice = "当前 ACP Agent 未提供原生分支树；可通过菜单新建带交接摘要的会话";
+    logEvent("warn", "ACP 后端隐藏原生 Thread Tree 入口。");
+    render();
+    return;
+  }
+  pushCenterView("tree");
+  state.focusedPane = "code";
+  render();
+}
+
+function openMergeView() {
+  pushCenterView("merge");
+  state.mergeStep = 1;
+  state.focusedPane = "code";
+  render();
+}
+
+function focusChatInput() {
+  state.dockOpen = true;
+  state.dockTab = "chat";
+  state.focusedPane = "dock";
+  state.statusNotice = "已聚焦右侧 Chat 输入框（按 Esc 立即回到代码窗口）";
+  render();
+  setTimeout(() => {
+    const el = document.getElementById("chatTextarea");
+    if (el) el.focus();
+  }, 15);
+}
+
+/* ==================== CODE & DUAL-SIDE DIFF ACTIONS ==================== */
+function activeCodeLines() {
+  return (state.centerMode === "diff" && state.diffSide === "base") ? state.baseLines : state.codeLines;
+}
+
+function activeCursorLine() {
+  return (state.centerMode === "diff" && state.diffSide === "base") ? state.baseCursorLine : state.cursorLine;
+}
+
+function setActiveCursorLine(n) {
+  const max = activeCodeLines().length;
+  const clamped = Math.max(1, Math.min(max, n));
+  if (state.centerMode === "diff" && state.diffSide === "base") state.baseCursorLine = clamped;
+  else state.cursorLine = clamped;
+}
+
+function getSelectionRange() {
+  const cur = activeCursorLine();
+  if (state.visualAnchor === null) return [cur, cur];
+  return [Math.min(cur, state.visualAnchor), Math.max(cur, state.visualAnchor)];
+}
+
+function openSelectionAsk(explicitSteer) {
+  const prev = state.focusedPane;
+  const [s, e] = getSelectionRange();
+  const ws = currentWs();
+  const sidePrefix = (state.centerMode === "diff" && state.diffSide === "base") ? "Base:" : "";
+  const ref = `${sidePrefix}${ws.file}:${s}${e > s ? "-" + e : ""}`;
+  state.overlay = {
+    type: "selection_ask",
+    returnPane: prev,
+    ref,
+    explicitSteer: Boolean(explicitSteer),
+    text: ""
+  };
+  render();
+  setTimeout(() => {
+    const inp = document.getElementById("overlayInput");
+    if (inp) inp.focus();
+  }, 15);
+}
+
+function submitSelectionAsk(rawQuestion, explicitSteerOverride) {
+  const ov = state.overlay;
+  const ref = ov?.ref || `${currentWs().file}:${activeCursorLine()}`;
+  const explicitSteer = explicitSteerOverride !== undefined ? explicitSteerOverride : Boolean(ov?.explicitSteer);
+  const question = (rawQuestion || "").trim();
+  if (!question) {
+    state.statusNotice = "请输入你要问的具体问题（按 Esc 取消）";
+    render();
+    return;
+  }
+  state.overlay = null;
+  state.visualAnchor = null;
+  state.focusedPane = "code"; // Keep focus strictly in code window!
+  dispatchCodePrompt(ref, question, explicitSteer);
+}
+
+function sendFromCode(explicitSteer, directQuestion) {
+  if (typeof directQuestion === "string" && directQuestion.trim()) {
+    const [s, e] = getSelectionRange();
+    const ws = currentWs();
+    const sidePrefix = (state.centerMode === "diff" && state.diffSide === "base") ? "Base:" : "";
+    const ref = `${sidePrefix}${ws.file}:${s}${e > s ? "-" + e : ""}`;
+    state.visualAnchor = null;
+    state.focusedPane = "code";
+    dispatchCodePrompt(ref, directQuestion.trim(), explicitSteer);
+    return;
+  }
+  openSelectionAsk(explicitSteer);
+}
+
+function dispatchCodePrompt(ref, question, explicitSteer) {
+  state.focusedPane = "code";
+  const th = currentThread();
+  const fullText = `${question}（关联 ${ref}）`;
+
+  if (state.threadStatus === "idle" || state.threadStatus === "unread") {
+    state.threadStatus = "running";
+    state.chat.push({ role: "你", text: fullText });
+    state.statusNotice = `已发给「${th.title}」(${ref}) · 焦点保持在代码区`;
+    logEvent("info", `代码区向 [${th.title}] 发送真实提问 (${ref})。`);
+    render();
+    return;
+  }
+
+  if (state.threadStatus === "needs_input") {
+    state.pendingQuestion = false;
+    if (state.overlay?.type === "question") state.overlay = null;
+    state.threadStatus = "running";
+    logEvent("warn", "新发送指令已自动取消挂起的待回答问题。");
+  }
+
+  const useSteer = explicitSteer && state.backend === "pi";
+  const lane = useSteer ? "steering" : "followUp";
+  state.queue[lane].push({
+    id: "q" + Date.now().toString().slice(-3),
+    text: fullText,
+    refs: [ref],
+    commentIds: []
+  });
+
+  const label = useSteer ? "下一步插话 +1" : "后续排队 +1";
+  state.statusNotice = `已发给「${th.title}」(${label}) · 底部 Shelf 不弹开，焦点留在代码区`;
+  logEvent("info", `代码区投递 → [${th.title} / ${lane}] (${ref})。`);
+  render();
+}
+
+/* ==================== COMMENTS LIFECYCLE & SEND TARGETS ==================== */
+function openCommentCreator(multiline, editCommentId) {
+  const prev = state.focusedPane;
+  const existing = editCommentId ? state.comments.find(c => c.id === editCommentId) : null;
+  const side = existing ? existing.side : (state.centerMode === "diff" ? state.diffSide : "modified");
+  const [s, e] = existing ? [existing.line, existing.line] : getSelectionRange();
+
+  if (multiline) {
+    state.overlay = {
+      type: "scratch",
+      purpose: "comment",
+      editId: existing?.id || null,
+      side,
+      returnPane: prev,
+      line: s,
+      endLine: e,
+      text: existing ? existing.text : "建议这里补充两项检查：\n1. 兼容大小写 Bearer 前缀\n2. 允许 30 秒时钟偏移容差"
+    };
+  } else {
+    state.overlay = {
+      type: "comment_quick",
+      editId: existing?.id || null,
+      side,
+      returnPane: prev,
+      line: s,
+      endLine: e,
+      text: existing ? existing.text : ""
+    };
+  }
+  render();
+  setTimeout(() => {
+    const inp = document.getElementById("overlayInput");
+    if (inp) inp.focus();
+  }, 15);
+}
+
+function saveCommentFromOverlay(rawText) {
+  const ov = state.overlay;
+  if (!ov) return;
+  const clean = (rawText || "").trim() || "请确认此分支在异常输入下的行为";
+  const summaryLine = clean.split("\n")[0] + (clean.includes("\n") ? " …" : "");
+
+  if (ov.editId) {
+    const c = state.comments.find(x => x.id === ov.editId);
+    if (c) c.text = summaryLine;
+    state.statusNotice = `已更新草稿评论 ${ov.editId}`;
+  } else {
+    const id = "C-" + (state.comments.length + 1);
+    const linesArr = ov.side === "base" ? state.baseLines : state.codeLines;
+    state.comments.push({
+      id,
+      side: ov.side,
+      line: ov.line,
+      origLine: ov.line,
+      selected: true,
+      persisted: "draft",
+      anchor: "anchored",
+      quote: (linesArr[ov.line - 1] || "").trim(),
+      text: summaryLine,
+      targetLabel: null,
+      reply: null
+    });
+    state.statusNotice = `已在 ${ov.side === "base" ? "Base" : "Modified"} 第 ${ov.line} 行添加草稿 ${id}`;
+    logEvent("info", `显式创建评论 ${id} [side=${ov.side}, L${ov.line}]。`);
+  }
+  state.visualAnchor = null;
+  const ret = ov.returnPane || "code";
+  state.overlay = null;
+  state.focusedPane = ret;
+  render();
+}
+
+function availableSendTargets() {
+  return state.backend === "pi" ? SEND_TARGETS : SEND_TARGETS.filter(t => !t.piOnly);
+}
+
+function openTargetPicker() {
+  const list = availableSendTargets();
+  const curIdx = Math.max(0, list.findIndex(t => t.id === state.commentTargetId));
+  state.overlay = {
+    type: "target_picker",
+    returnPane: state.focusedPane,
+    idx: curIdx
+  };
+  render();
+}
+
+function selectSendTarget(targetId) {
+  state.commentTargetId = targetId;
+  const ret = state.overlay?.returnPane || "shelf";
+  state.overlay = null;
+  state.focusedPane = ret;
+  const tObj = SEND_TARGETS.find(t => t.id === targetId) || SEND_TARGETS[0];
+  state.statusNotice = `评论发送目标已设为：${tObj.label}`;
+  render();
+}
+
+function dispatchComments(ids, explicitSteer, overrideTargetId) {
+  const targets = state.comments.filter(c => ids.includes(c.id) && c.persisted === "draft");
+  if (targets.length === 0) {
+    state.statusNotice = "请先按 Space 勾选至少 1 条草稿评论再发送";
+    render();
+    return;
+  }
+  const tIds = targets.map(c => c.id);
+  const chosenId = overrideTargetId || state.commentTargetId;
+  const dest = availableSendTargets().find(t => t.id === chosenId) || SEND_TARGETS[0];
+  const wantSteer = Boolean(explicitSteer || dest.id === "current_steer");
+  const activeTitle = currentThread().title;
+
+  // Destination 4: Fork parallel subagents from current Thread & link into Merge sources!
+  if (dest.id === "subagents") {
+    targets.forEach(c => {
+      c.persisted = "sent";
+      c.reply = null;
+      c.targetLabel = "并行子代理";
+      const srcId = "sub_" + c.id;
+      if (!state.mergeSources.some(s => s.id === srcId)) {
+        state.mergeSources.push({
+          id: srcId,
+          checked: true,
+          name: `并行子代理 (${c.id}) · ${c.text}`,
+          note: `针对 L${c.line} 的独立调查结论与定位证据`
+        });
+      }
+    });
+    state.statusNotice = `已将 (${tIds.join(", ")}) 分叉为 ${tIds.length} 个并行子代理 · 结论已接入合并列表`;
+    logEvent("info", `评论 [${tIds.join(", ")}] 已分叉为并行子代理，并同步写入当前工作区可合并结论列表。`);
+    render();
+    return;
+  }
+
+  // Destination 2 or 3: New Thread or History Thread
+  if (dest.id === "new_thread" || dest.id === "history_thread") {
+    if (dest.id === "new_thread") {
+      const wsData = currentWsData();
+      const newId = "t" + (wsData.threads.length + 1);
+      const newTitle = `新会话 #${wsData.threads.length + 1} · 评论跟进`;
+      wsData.threads.push({
+        id: newId,
+        title: newTitle,
+        status: "running",
+        pendingQuestion: false,
+        composerDraft: "",
+        composerRefs: [],
+        queue: { steering: [], followUp: [], system: [] },
+        chat: [{ role: "你", text: `处理评论 (${tIds.join(", ")})：${targets[0].text}` }]
+      });
+      targets.forEach(c => { c.persisted = "sent"; c.reply = null; c.targetLabel = newTitle; });
+      state.statusNotice = `已创建「${newTitle}」并发送 ${tIds.length} 条评论 · 状态进入「处理中」`;
+    } else {
+      targets.forEach(c => { c.persisted = "sent"; c.reply = null; c.targetLabel = "历史会话"; });
+      state.statusNotice = `已将 ${tIds.length} 条评论发送至「${dest.label}」· 状态进入「处理中」`;
+    }
+    logEvent("info", `评论 [${tIds.join(", ")}] 已投递至 ${dest.label}。`);
+    render();
+    return;
+  }
+
+  // Destination 1: Current Active Thread (always used by inline single-comment send!)
+  if (state.threadStatus === "idle" || state.threadStatus === "unread") {
+    targets.forEach(c => {
+      c.persisted = "sent";
+      c.reply = null;
+      c.targetLabel = activeTitle;
+    });
+    state.threadStatus = "running";
+    state.chat.push({ role: "你", text: `请处理评论 (${tIds.join(", ")})：${targets[0].text}` });
+    state.statusNotice = `已发给「${activeTitle}」(${tIds.length} 条) · 状态进入「处理中」`;
+    logEvent("info", `[${activeTitle}] 接收评论 [${tIds.join(", ")}] → 处理中。`);
+  } else {
+    const useSteer = wantSteer && state.backend === "pi";
+    const lane = useSteer ? "steering" : "followUp";
+    targets.forEach(c => {
+      c.persisted = "sent";
+      c.reply = null;
+      c.targetLabel = useSteer ? `${activeTitle}·Steer` : activeTitle;
+    });
+    state.queue[lane].push({
+      id: "qc" + Date.now().toString().slice(-3),
+      text: `评论 (${tIds.join(", ")})：${targets[0].text}`,
+      refs: tIds,
+      commentIds: tIds
+    });
+    state.statusNotice = useSteer
+      ? `评论 (${tIds.join(", ")}) 已作为紧急插话排入「${activeTitle}」(+1)`
+      : `评论 (${tIds.join(", ")}) 已排入「${activeTitle}」后续队列 (+1)`;
+    logEvent("info", `评论入队 [${activeTitle} / ${lane}] → 已排队。`);
+  }
+  render();
+}
+
+function handleCommentAction(id, action) {
+  const c = state.comments.find(x => x.id === id);
+  if (!c) return;
+  const view = deriveCommentView(c);
+  if (!view.actions.includes(action)) return;
+
+  if (action === "send") {
+    // Crucial Fix: Inline single-comment send ALWAYS targets the active Thread, never leaking batch target!
+    dispatchComments([c.id], false, "current");
+  } else if (action === "edit") {
+    openCommentCreator(false, c.id);
+  } else if (action === "dismiss") {
+    c.persisted = "dismissed";
+    state.statusNotice = `已忽略草稿评论 ${c.id}`;
+  } else if (action === "restore") {
+    c.persisted = "draft";
+    state.statusNotice = `已将 ${c.id} 恢复为草稿`;
+  } else if (action === "withdraw") {
+    ["steering", "followUp"].forEach(lane => {
+      const idx = state.queue[lane].findIndex(q => (q.commentIds || []).includes(c.id));
+      if (idx >= 0) withdrawQueueItem(lane, idx);
+    });
+  } else if (action === "view_thread") {
+    state.dockOpen = true;
+    state.dockTab = "chat";
+    state.focusedPane = "dock";
+    state.statusNotice = `正在查看处理 ${c.id} 的会话进度（可在调试抽屉点「模拟 Agent 回复」观察转为待确认）`;
+  } else if (action === "resolve") {
+    c.persisted = "resolved";
+    state.statusNotice = `已确认并解决评论 ${c.id}`;
+  } else if (action === "followup") {
+    c.persisted = "draft";
+    openCommentCreator(false, c.id);
+  } else if (action === "reopen") {
+    c.persisted = "sent"; // Keeps existing reply so user can re-verify or follow up, preserving history!
+    if (!c.reply) c.persisted = "draft";
+    state.statusNotice = `已重开评论 ${c.id}（完整保留原有回复历史）`;
+  }
+  render();
+}
+
+function simulateAgentReplyComments() {
+  let count = 0;
+  state.comments.forEach(c => {
+    if (c.persisted === "sent" && !isCommentQueued(c.id) && !c.reply) {
+      c.reply = "已按评论修改实现并补充断言验证";
+      count++;
+    }
+  });
+  if (count === 0) {
+    state.statusNotice = "当前没有处于「处理中」的评论（请先发送一条草稿评论）";
+  } else {
+    state.statusNotice = `Agent 已回复 ${count} 条评论 → 状态由「处理中」推进为「待确认」，现在可执行「解决」或「继续追问」`;
+    logEvent("info", `${count} 条处理中评论收到关联回复 → 转为「待确认」。`);
+  }
+  render();
+}
+
+/* Unified Queue Rollback Pipeline (Shared by Withdraw / Stop / Compact / Interrupt) */
+function rollbackQueuedItemsToDraft(items) {
+  if (!items || items.length === 0) return { count: 0, commentIds: [] };
+  const rolledCommentIds = [];
+  items.forEach(it => {
+    (it.commentIds || []).forEach(cid => {
+      const c = state.comments.find(x => x.id === cid);
+      if (c) {
+        c.persisted = "draft";
+        c.targetLabel = null;
+        rolledCommentIds.push(cid);
+      }
+    });
+  });
+  state.composerDraft = [state.composerDraft, ...items.map(i => i.text)].filter(Boolean).join("\n");
+  const mergedRefs = new Set([...state.composerRefs, ...items.flatMap(i => i.refs || [])]);
+  state.composerRefs = [...mergedRefs];
+  // state.queue.system remains strictly isolated!
+  return { count: items.length, commentIds: rolledCommentIds };
+}
+
+function drainAllUserQueuesToDraft() {
+  const pendingUser = [...state.queue.steering, ...state.queue.followUp];
+  state.queue.steering = [];
+  state.queue.followUp = [];
+  return rollbackQueuedItemsToDraft(pendingUser);
+}
+
+function withdrawQueueItem(lane, idx) {
+  const item = state.queue[lane].splice(idx, 1)[0];
+  if (!item) return;
+  const { commentIds } = rollbackQueuedItemsToDraft([item]);
+  if (commentIds.length > 0) {
+    state.statusNotice = `已撤回排队评论 (${commentIds.join(", ")}) → 自动退回「草稿」并完整回填文字与引用`;
+  } else {
+    state.statusNotice = "已撤回排队消息并完整回填文字与引用至草稿";
+  }
+  render();
+}
+
+/* ==================== COMPOSER & THREAD CONTROLS ==================== */
+function submitComposer(mode) {
+  const el = document.getElementById("chatTextarea");
+  const text = (el ? el.value : state.composerDraft).trim() || "统一错误返回格式并运行测试";
+  state.composerDraft = "";
+  state.composerRefs = [];
+  state.composerMenuOpen = false;
+
+  if (state.threadStatus === "needs_input") {
+    state.pendingQuestion = false;
+    if (state.overlay?.type === "question") state.overlay = null;
+    logEvent("warn", "新发送指令已自动取消挂起的待回答问题。");
+  }
+
+  if (mode === "interrupt") {
+    const drained = drainAllUserQueuesToDraft();
+    state.threadStatus = "running";
+    state.chat.push({ role: "你", text: `[立即改做] ${text}` });
+    state.statusNotice = `已中止旧运行并立即执行新指令（原未消费 ${drained.count} 条排队项已统一回滚至草稿，系统回传隔离保留）`;
+    render();
+    return;
+  }
+
+  if (state.threadStatus === "idle" || state.threadStatus === "unread") {
+    state.threadStatus = "running";
+    state.chat.push({ role: "你", text });
+    state.statusNotice = "已发送消息";
+  } else {
+    const lane = (mode === "steer" && state.backend === "pi") ? "steering" : "followUp";
+    state.queue[lane].push({ id: "q" + Date.now().toString().slice(-3), text, refs: [], commentIds: [] });
+    state.statusNotice = lane === "steering" ? "已显式加入下一步插话 (+1)" : "已安全排入后续队列 (+1)";
+  }
+  render();
+}
+
+function stopRunningThread() {
+  const drained = drainAllUserQueuesToDraft();
+  state.threadStatus = "idle";
+  state.composerMenuOpen = false;
+  state.statusNotice = `已停止运行 · ${drained.count} 条未消费排队项已回填草稿（关联评论已退回草稿，系统回传保留）`;
+  render();
+}
+
+function runCompact() {
+  state.composerMenuOpen = false;
+  if (state.backend === "acp") return;
+  const drained = drainAllUserQueuesToDraft();
+  state.chat.push({ role: "系统", text: "上下文已压缩（活跃 Spec 与计划摘要已保留）" });
+  state.statusNotice = `已完成上下文压缩（${drained.count} 条未消费排队项已回填草稿，关联评论已安全退回草稿）`;
+  render();
+}
+
+/* ==================== PANEL & FLOATING PICKERS ==================== */
+function toggleLeftNav() {
+  state.leftNavOpen = !state.leftNavOpen;
+  if (state.leftNavOpen) state.focusedPane = "nav";
+  else if (state.focusedPane === "nav") state.focusedPane = "code";
+  if (state.centerMode === "diff") syncReviewLayoutForWidth(false);
+  render();
+}
+
+function toggleDock() {
+  state.dockOpen = !state.dockOpen;
+  if (!state.dockOpen && state.focusedPane === "dock") state.focusedPane = "code";
+  state.statusNotice = state.dockOpen ? "已展开右侧 Agent Dock" : "已隐藏 Agent Dock（后台任务继续运行）";
+  render();
+}
+
+function toggleShelf(tab) {
+  // Explicit user Shelf action takes ownership over narrow-mode auto-open flag
+  state.shelfAutoOpenedByNarrow = false;
+  if (tab && (!state.shelfOpen || state.shelfTab !== tab)) {
+    state.shelfOpen = true;
+    state.shelfTab = tab;
+    state.shelfIdx = 0;
+    state.focusedPane = "shelf";
+  } else {
+    state.shelfOpen = !state.shelfOpen;
+    if (!state.shelfOpen && state.focusedPane === "shelf") state.focusedPane = "code";
+  }
+  render();
+}
+
+function openWorkspacePicker() {
+  state.overlay = {
+    type: "ws_picker",
+    returnPane: state.focusedPane,
+    idx: state.tabs[state.activeTabIdx]?.wsId === "retry" ? 1 : 0
+  };
+  render();
+}
+
+function applyWorkspaceChoice(wsId, inNewTab) {
+  const ret = state.overlay?.returnPane || "code";
+  state.overlay = null;
+  if (inNewTab) {
+    state.tabs.push({ id: state.tabs.length + 1, wsId, isUserNative: false });
+    state.activeTabIdx = state.tabs.length - 1;
+    state.statusNotice = `已在新 Tabpage 打开工作区 ${WORKSPACES[wsId].name}（展示其独立评论与会话）`;
+  } else {
+    if (state.tabs[state.activeTabIdx].isUserNative) state.activeTabIdx = 0;
+    state.tabs[state.activeTabIdx].wsId = wsId;
+    state.statusNotice = `已切换至工作区 ${WORKSPACES[wsId].name} · 当前会话：${currentThread().title}（原工作区后台继续运行）`;
+  }
+  state.shelfIdx = 0;
+  state.dockIdx = 0;
+  state.mergeIdx = 0;
+  state.mergeStep = 1;
+  state.visualAnchor = null;
+  state.focusedPane = ret;
+  render();
+}
+
+function openModelFloat() {
+  state.overlay = {
+    type: "model",
+    returnPane: state.focusedPane,
+    idx: state.activeModelIdx
+  };
+  render();
+}
+
+function confirmModelChoice(idx) {
+  state.activeModelIdx = idx;
+  const ret = state.overlay?.returnPane || "code";
+  state.overlay = null;
+  state.focusedPane = ret;
+  state.statusNotice = `已切换模型为 ${MODELS[idx].label}`;
+  render();
+}
+
+/* Non-intrusive AI question notification first; user opens float when ready! */
+function notifyPendingQuestion() {
+  state.pendingQuestion = true;
+  state.threadStatus = "needs_input";
+  state.statusNotice = "AI 等你回答 · 未弹窗打断编辑器，准备好时按 Space a r 或点「等待回答」打开";
+  logEvent("info", "Agent 发起提问：仅更新状态提示，不强弹窗抢占编辑器键盘。");
+  render();
+}
+
+function openQuestionFloat() {
+  state.pendingQuestion = true;
+  state.threadStatus = "needs_input";
+  state.overlay = { type: "question", returnPane: state.focusedPane, idx: 0 };
+  render();
+}
+
+function confirmQuestion() {
+  const idx = state.overlay?.idx || 0;
+  const ret = state.overlay?.returnPane || "code";
+  state.overlay = null;
+  state.pendingQuestion = false;
+  state.threadStatus = "running";
+  state.focusedPane = ret;
+  state.chat.push({ role: "你", text: `采用方案 ${idx === 0 ? "A（RFC + 30s 容差）" : "B（双 Header 过渡）"}` });
+  state.statusNotice = "已确认方案并恢复原窗口焦点";
+  render();
+}
+
+function closeOverlay() {
+  if (!state.overlay) return;
+  const ret = state.overlay.returnPane || "code";
+  state.overlay = null;
+  state.focusedPane = ret;
+  render();
+}
+
+function toggleDirty() {
+  state.bufferModified = !state.bufferModified;
+  state.statusNotice = state.bufferModified ? "当前代码未保存 [+]：脏 Buffer 保护已生效" : "当前文件已保存";
+  render();
+}
+
+function simulateAgentWrite(mode) {
+  if (state.bufferModified) {
+    state.statusNotice = "⚠ 已拦截外部覆盖：当前文件有未保存修改 [+]";
+    logEvent("guard", "脏 Buffer 保护拦截外部静默覆盖。");
+    render();
+    return;
+  }
+  if (mode === "shift") {
+    state.codeLines.unshift("-- 时钟容差常量", "local DEFAULT_LEEWAY = 30");
+    state.lineOffset += 2;
+    state.cursorLine += 2;
+    state.comments.forEach(c => {
+      if (c.side === "modified" && c.anchor !== "outdated") {
+        c.line += 2;
+        c.anchor = "moved";
+      }
+    });
+    state.statusNotice = "文件已刷新（Modified 侧评论行号静默 +2）";
+  } else {
+    const idx = state.codeLines.findIndex(l => l.includes("header:match"));
+    if (idx >= 0) {
+      state.codeLines[idx] = "  local token = M.parse_scheme_case_insensitive(header)";
+      state.comments.forEach(c => { if (c.id === "C-1") c.anchor = "outdated"; });
+      state.statusNotice = "⚠ 评论 C-1 原文已变，标记为需核对快照";
+    }
+  }
+  render();
+}
+
+function cycleThreadState() {
+  const seq = ["running", "idle", "unread"];
+  state.threadStatus = seq[(seq.indexOf(state.threadStatus) + 1) % seq.length];
+  render();
+}
+
+function toggleRunningDefaultPref() {
+  state.runningEnterPref = state.runningEnterPref === "followUp" ? "steer" : "followUp";
+  state.statusNotice = `用户偏好已更新：Chat 运行中回车默认 = ${state.runningEnterPref === "followUp" ? "Follow-up（后续排队）" : "Steer（下一步插话）"}`;
+  render();
+}
+
+function toggleBackend() {
+  state.backend = state.backend === "pi" ? "acp" : "pi";
+  if (state.backend === "acp") {
+    if (state.commentTargetId === "current_steer") state.commentTargetId = "current";
+    if (state.centerMode === "tree") popCenterView();
+  }
+  render();
+}
+
+function previewCommentLocation(c) {
+  if (!c) return;
+  if (c.side === "base" && state.centerMode !== "diff") {
+    enterDiffReview();
+  }
+  state.diffSide = c.side;
+  if (c.side === "base") state.baseCursorLine = c.line;
+  else state.cursorLine = c.line;
+}
+
+function jumpToCommentLocation(c) {
+  previewCommentLocation(c);
+  state.focusedPane = "code";
+  render();
+}
+
+function previewCommentById(id) {
+  const c = state.comments.find(x => x.id === id);
+  if (c) previewCommentLocation(c);
+}
+
+function jumpToCommentById(id) {
+  const c = state.comments.find(x => x.id === id);
+  if (c) jumpToCommentLocation(c);
+}
+
+function jumpToCode(file, line) {
+  if (state.bufferModified) {
+    state.statusNotice = `当前编辑窗有未保存修改 [+]：已在安全位预览 ${file}:${line}，不顶替原窗口`;
+    logEvent("guard", "保护未保存编辑 split 不被顶替。");
+  } else {
+    state.centerMode = "code";
+    state.cursorLine = Math.min(state.codeLines.length, line + state.lineOffset);
+    state.focusedPane = "code";
+    state.statusNotice = `已定位至 ${file}:${state.cursorLine}`;
+  }
+  render();
+}
+
+/* ==================== RENDERING ==================== */
+function esc(s) {
+  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+function renderActionButtons(c) {
+  const v = deriveCommentView(c);
+  const activeTitle = currentThread().title;
+  const map = {
+    send: `<button class="btn btn-xs btn-primary" title="发给：${esc(activeTitle)}" onclick="event.stopPropagation(); handleCommentAction('${c.id}','send')">发给当前会话</button>`,
+    edit: `<button class="btn btn-xs" onclick="event.stopPropagation(); handleCommentAction('${c.id}','edit')">编辑</button>`,
+    dismiss: `<button class="btn btn-xs btn-quiet" onclick="event.stopPropagation(); handleCommentAction('${c.id}','dismiss')">忽略</button>`,
+    restore: `<button class="btn btn-xs" onclick="event.stopPropagation(); handleCommentAction('${c.id}','restore')">恢复草稿</button>`,
+    withdraw: `<button class="btn btn-xs" onclick="event.stopPropagation(); handleCommentAction('${c.id}','withdraw')">撤回编辑</button>`,
+    view_thread: `<button class="btn btn-xs" onclick="event.stopPropagation(); handleCommentAction('${c.id}','view_thread')">查看会话</button>`,
+    resolve: `<button class="btn btn-xs btn-primary" onclick="event.stopPropagation(); handleCommentAction('${c.id}','resolve')">解决</button>`,
+    followup: `<button class="btn btn-xs" onclick="event.stopPropagation(); handleCommentAction('${c.id}','followup')">继续修改</button>`,
+    reopen: `<button class="btn btn-xs" onclick="event.stopPropagation(); handleCommentAction('${c.id}','reopen')">重开</button>`
+  };
+  return v.actions.map(a => map[a] || "").join("");
+}
+
+function render() {
+  for (let i = 1; i <= 3; i++) {
+    document.getElementById("loopCard" + i)?.classList.toggle("active", state.activeLoop === i);
+  }
+  renderTabline();
+  renderMiddle();
+  renderShelf();
+  renderStatusAndCmd();
+  renderOverlay();
+  renderDebug();
+}
+
+function renderTabline() {
+  const ws = currentWs();
+  document.getElementById("tuiTabs").innerHTML = state.tabs.map((t, idx) => {
+    const label = t.isUserNative ? t.label : `${idx + 1}: ${WORKSPACES[t.wsId].name} · ${WORKSPACES[t.wsId].file.split("/").pop()}`;
+    return `<div class="tui-tab ${state.activeTabIdx === idx ? "active" : ""}" onclick="state.activeTabIdx=${idx}; render();">${esc(label)}</div>`;
+  }).join("");
+
+  const statusTag = (state.threadStatus === "needs_input" || state.pendingQuestion)
+    ? `<span class="tag tag-gold" style="cursor:pointer;" onclick="openQuestionFloat()" title="按 Space a r 或点击打开回答">● 等待回答 (Space ar)</span>`
+    : state.threadStatus === "running"
+      ? `<span class="tag tag-foam">● 运行中</span>`
+      : state.threadStatus === "unread"
+        ? `<span class="tag tag-rose">● 完成未读</span>`
+        : `<span class="tag tag-dim">○ 空闲</span>`;
+
+  document.getElementById("tuiTabRight").innerHTML = state.tabs[state.activeTabIdx].isUserNative
+    ? `<span>用户自有 Tabpage（pide 不接管）</span>`
+    : `<span>工作区: <b style="color:var(--text); cursor:pointer;" onclick="openWorkspacePicker()">${esc(ws.name)} ▾</b></span>
+       <span>${esc(ws.planStep)}</span>
+       ${statusTag}`;
+}
+
+function renderMiddle() {
+  const mid = document.getElementById("tuiMiddle");
+  const curTab = state.tabs[state.activeTabIdx];
+
+  if (curTab.isUserNative) {
+    mid.innerHTML = `
+      <div class="tui-win focused" style="flex:1;">
+        <div class="tui-winbar"><span>~/notes/architecture-notes.md</span><span>用户独立 Tabpage</span></div>
+        <div class="tui-win-body" style="padding:14px 18px; font-family:var(--sans);">
+          <p style="margin-top:0;"><b>Workspace 与 Tabpage 解耦：</b>默认在当前 Tab 原地切换工作区，只有显式按 <kbd>t</kbd> 才新建 Tabpage。</p>
+          <button class="btn btn-xs" onclick="state.activeTabIdx=0; render();">返回 Tab 1</button>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  let html = "";
+  if (state.leftNavOpen) html += renderLeftNav();
+
+  if (state.centerMode === "code") html += renderCodePane();
+  else if (state.centerMode === "diff") html += renderDiffPanes();
+  else if (state.centerMode === "tree") html += renderTreePane();
+  else if (state.centerMode === "merge") html += renderMergePane();
+
+  if (state.dockOpen) html += renderDockPane();
+  mid.innerHTML = html;
+}
+
+function renderLeftNav() {
+  const wsData = currentWsData();
+  const navItems = {
+    workspaces: [
+      { title: "feat/auth", sub: (state.tabs[state.activeTabIdx]?.wsId || "auth") === "auth" ? "当前 · 已验证 ✓" : "后台存活", wsId: "auth" },
+      { title: "fix/retry-backoff", sub: (state.tabs[state.activeTabIdx]?.wsId || "auth") === "retry" ? "当前 · 待验证" : "待验证", wsId: "retry" }
+    ],
+    threads: wsData.threads.map(th => ({
+      title: th.title,
+      sub: th.id === wsData.activeThreadId ? "当前目标" : (th.status === "running" ? "运行中" : "空闲"),
+      threadId: th.id
+    })),
+    specs: [
+      { title: "goal-and-requirements", sub: "目标" },
+      { title: "module-auth", sub: "模块边界" }
+    ],
+    artifacts: [
+      { title: "★ jwt-edge-cases.spec.md", sub: "交付物" },
+      { title: "★ auth-flow.mmd", sub: "流程图" },
+      { title: "└─ .test-run.log", sub: "已折叠" }
+    ]
+  }[state.leftNavKind] || [];
+
+  return `
+    <div class="tui-win win-nav ${state.focusedPane === "nav" ? "focused" : ""}" onclick="state.focusedPane='nav'; render();">
+      <div class="tui-winbar">
+        <span>导航 · ${esc(state.leftNavKind)}</span>
+        <span><kbd>j</kbd><kbd>k</kbd> <kbd>q</kbd></span>
+      </div>
+      <div style="display:flex; border-bottom:1px solid var(--hl-med); font-family:var(--sans); font-size:11px;">
+        ${[["workspaces","工作区"],["threads","会话"],["specs","Spec"],["artifacts","产物"]].map(([k, lbl]) => `
+          <div style="flex:1; text-align:center; padding:4px 2px; cursor:pointer; color:${state.leftNavKind===k?"var(--rose)":"var(--muted)"};"
+               onclick="event.stopPropagation(); state.leftNavKind='${k}'; state.leftNavIdx=0; render();">${lbl}</div>
+        `).join("")}
+      </div>
+      <div class="tui-win-body">
+        ${navItems.map((it, i) => `
+          <div class="vlist-row ${state.leftNavIdx === i ? "selected" : ""}"
+               onclick="event.stopPropagation(); state.leftNavIdx=${i}; if('${state.leftNavKind}'==='workspaces' && '${it.wsId||""}') applyWorkspaceChoice('${it.wsId}', false); else if('${state.leftNavKind}'==='threads' && '${it.threadId||""}') switchActiveThread('${it.threadId}'); else render();">
+            <span>${esc(it.title)}</span>
+            <span style="color:var(--muted); font-size:11px;">${esc(it.sub)}</span>
+          </div>
+        `).join("")}
+      </div>
+    </div>
+  `;
+}
+
+function renderBufferLines(linesArr, side, activeLine, isPaneFocused) {
+  const [selS, selE] = getSelectionRange();
+  const showVis = isPaneFocused && state.visualAnchor !== null;
+
+  return linesArr.map((line, i) => {
+    const lnum = i + 1;
+    const isCur = lnum === activeLine;
+    const isVis = showVis && lnum >= selS && lnum <= selE;
+    const lineComments = state.comments.filter(c => c.side === side && c.line === lnum && c.persisted !== "dismissed");
+    const hasOutdated = lineComments.some(c => c.anchor === "outdated" && c.persisted !== "resolved");
+    const allResolved = lineComments.length > 0 && lineComments.every(c => c.persisted === "resolved");
+
+    let signHtml = "";
+    if (state.centerMode === "diff") {
+      if (side === "base" && (lnum === 4 || lnum === 6)) signHtml = `<span style="color:var(--love);">-</span>`;
+      else if (side === "modified" && (lnum === 4 || lnum === 7 || lnum === 12)) signHtml = `<span style="color:var(--foam);">+</span>`;
+    }
+    if (lineComments.length > 0) {
+      if (hasOutdated) signHtml = `<span style="color:var(--gold);">!</span>`;
+      else if (allResolved) signHtml = `<span style="color:var(--pine);">✓</span>`;
+      else signHtml = `<span style="color:var(--iris);">●</span>`;
+    }
+
+    let diffCls = "";
+    if (state.centerMode === "diff") {
+      if (side === "base" && (lnum === 4 || lnum === 6)) diffCls = "diff-del";
+      if (side === "modified" && (lnum === 4 || lnum === 7 || lnum === 12)) diffCls = "diff-add";
+    }
+
+    let eolSummary = "";
+    let expandedCard = "";
+    const isLinkedCommentPaneActive =
+      (state.focusedPane === "shelf" && state.shelfTab === "comments") ||
+      (state.focusedPane === "dock" && state.dockTab === "review");
+    const expandHere = isCur && (isPaneFocused || (isLinkedCommentPaneActive && state.diffSide === side));
+    if (lineComments.length > 0) {
+      if (expandHere) {
+        expandedCard = lineComments.map(c => {
+          const v = deriveCommentView(c);
+          const outdatedNote = c.anchor === "outdated"
+            ? `<div style="color:var(--gold); font-size:11px; margin-top:2px;">⚠ 原文已变，快照：<code class="mono">${esc(c.quote)}</code></div>`
+            : "";
+          const replyNote = c.reply
+            ? `<div style="color:var(--foam); font-size:11.5px; margin-top:3px;">↳ 回复：${esc(c.reply)}</div>`
+            : "";
+          return `
+            <div class="inline-card ${c.anchor === "outdated" ? "outdated" : ""} ${v.key === "resolved" ? "resolved" : ""}" onclick="event.stopPropagation()">
+              <div>
+                <span class="tag ${v.tagCls}">${v.label}</span>
+                ${c.targetLabel ? `<span class="tag tag-dim" style="margin-left:4px;">→ ${esc(c.targetLabel)}</span>` : ""}
+                <span style="margin-left:6px;">${esc(c.text)}</span>
+                ${outdatedNote}
+                ${replyNote}
+              </div>
+              <div style="display:flex; gap:4px; flex-shrink:0;">${renderActionButtons(c)}</div>
+            </div>
+          `;
+        }).join("");
+      } else {
+        const v0 = deriveCommentView(lineComments[0]);
+        const outdatedCnt = lineComments.filter(c => c.anchor === "outdated" && c.persisted !== "resolved").length;
+        const summaryText = lineComments.length === 1 ? `${v0.label}: ${lineComments[0].text}` : `${lineComments.length} 条评论`;
+        eolSummary = `<span class="virt-eol ${outdatedCnt ? "warn" : ""}">● ${esc(summaryText)}${outdatedCnt ? " · 原文已变" : ""}</span>`;
+      }
+    }
+
+    return `
+      <div class="cline ${diffCls} ${isCur ? (isPaneFocused ? "focused-cursor" : "cursor") : ""} ${isVis ? "visual" : ""}"
+           onclick="event.stopPropagation(); state.focusedPane='code'; state.diffSide='${side}'; setActiveCursorLine(${lnum}); render();">
+        <span class="csign">${signHtml}</span>
+        <span class="clnum">${lnum}</span>
+        <span class="ctext">${esc(line) || " "}${eolSummary}</span>
+      </div>
+      ${expandedCard}
+    `;
+  }).join("");
+}
+
+function renderCodePane() {
+  const ws = currentWs();
+  const [selS, selE] = getSelectionRange();
+  const hasVis = state.visualAnchor !== null;
+
+  const bar = hasVis
+    ? `<span>已选 L${selS}–${selE}：<kbd>Space</kbd><kbd>as</kbd> 后续排队 · <kbd>Space</kbd><kbd>aS</kbd> 插话 · <kbd>Space</kbd><kbd>ac</kbd> 留评论</span>
+       <span style="display:flex; gap:4px;">
+         <button class="btn btn-xs btn-primary" onclick="event.stopPropagation(); sendFromCode(false)">排队发送 (Space as)</button>
+         <button class="btn btn-xs" onclick="event.stopPropagation(); openCommentCreator(false)">留评论 (Space ac)</button>
+       </span>`
+    : `<span>${esc(ws.file)} ${state.bufferModified ? `<span class="tag tag-love">[+] 未保存</span>` : ""}</span>
+       <span><kbd>v</kbd> 选区 · <kbd>Space</kbd><kbd>ac</kbd> 评论 · <kbd>Space</kbd><kbd>as</kbd> 发送 · <kbd>Space</kbd><kbd>ad</kbd> Diff</span>`;
+
+  return `
+    <div class="tui-win ${state.focusedPane === "code" ? "focused" : ""}" style="flex:1;" onclick="state.focusedPane='code'; render();">
+      <div class="tui-winbar">${bar}</div>
+      <div class="tui-win-body">${renderBufferLines(state.codeLines, "modified", state.cursorLine, state.focusedPane === "code")}</div>
+    </div>
+  `;
+}
+
+function renderDiffPanes() {
+  const narrow = isNarrowForReview();
+  const ws = currentWs();
+  const baseFocused = state.focusedPane === "code" && state.diffSide === "base";
+  const modFocused = state.focusedPane === "code" && state.diffSide === "modified";
+
+  if (narrow) {
+    const showingBase = state.diffSide === "base";
+    const activeLines = showingBase ? state.baseLines : state.codeLines;
+    const activeCur = showingBase ? state.baseCursorLine : state.cursorLine;
+    return `
+      <div class="tui-win ${state.focusedPane === "code" ? "focused" : ""}" style="flex:1;"
+           onclick="state.focusedPane='code'; render();">
+        <div class="tui-winbar">
+          <span style="display:flex; align-items:center; gap:6px;">
+            <span>单栏 Diff · ${esc(ws.file)}</span>
+            <button class="btn btn-xs ${showingBase ? "active" : ""}" onclick="event.stopPropagation(); state.diffSide='base'; render();">Base 旧侧</button>
+            <button class="btn btn-xs ${!showingBase ? "active" : ""}" onclick="event.stopPropagation(); state.diffSide='modified'; render();">Modified 新侧</button>
+          </span>
+          <span><kbd>Space</kbd><kbd>ab</kbd> 切新旧侧 · <kbd>Space</kbd><kbd>ac</kbd> 评论 · <kbd>Space</kbd><kbd>ad</kbd> 退出</span>
+        </div>
+        <div class="tui-win-body">${renderBufferLines(activeLines, state.diffSide, activeCur, state.focusedPane === "code")}</div>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="tui-win ${baseFocused ? "focused" : ""}" style="flex:1;"
+         onclick="state.focusedPane='code'; state.diffSide='base'; render();">
+      <div class="tui-winbar">
+        <span>Base (HEAD~1) · ${esc(ws.file)}</span>
+        <span>可定位与留旧侧评论 (<kbd>Space</kbd><kbd>ac</kbd>)</span>
+      </div>
+      <div class="tui-win-body">${renderBufferLines(state.baseLines, "base", state.baseCursorLine, baseFocused)}</div>
+    </div>
+    <div class="tui-win ${modFocused ? "focused" : ""}" style="flex:1;"
+         onclick="state.focusedPane='code'; state.diffSide='modified'; render();">
+      <div class="tui-winbar">
+        <span>Modified (Worktree) · ${esc(ws.file)}</span>
+        <span><kbd>Ctrl+h/l</kbd> 切新旧侧 · <kbd>Space</kbd><kbd>ac</kbd> 评论 · <kbd>Space</kbd><kbd>ad</kbd> 退出</span>
+      </div>
+      <div class="tui-win-body">${renderBufferLines(state.codeLines, "modified", state.cursorLine, modFocused)}</div>
+    </div>
+  `;
+}
+
+function renderTreePane() {
+  const curNode = state.treeNodes[state.treeIdx] || state.treeNodes[0];
+  return `
+    <div class="tui-win ${state.focusedPane === "code" ? "focused" : ""}" style="flex:1;" onclick="state.focusedPane='code'; render();">
+      <div class="tui-winbar">
+        <span>Thread Tree（插件只读 Buffer）</span>
+        <span><kbd>j</kbd><kbd>k</kbd> 移动 · <kbd>p</kbd> 预览 · <kbd>s</kbd> 干净子代理 · <kbd>f</kbd> 分叉 · <kbd>m</kbd> 合并 · <kbd>q</kbd> 返回</span>
+      </div>
+      <div class="tui-win-body" style="padding:8px 12px;">
+        ${state.treeNodes.map((n, i) => `
+          <div class="vlist-row ${state.treeIdx === i ? "selected" : ""}" style="padding-left:${12 + n.depth * 22}px;"
+               onclick="event.stopPropagation(); state.treeIdx=${i}; render();">
+            <span>${n.depth ? "└─ " : ""}${esc(n.title)}</span>
+            <span class="tag ${n.tag.includes("当前") ? "tag-foam" : "tag-dim"}">${esc(n.tag)}</span>
+          </div>
+        `).join("")}
+        ${state.treePreviewOpen ? `
+          <div style="margin:12px 6px 0; padding:10px 12px; border-radius:6px; background:var(--surface); border:1px solid var(--hl-med); font-family:var(--sans);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+              <b>节点预览：${esc(curNode.title)}</b>
+              <div style="display:flex; gap:5px;">
+                <button class="btn btn-xs btn-primary" onclick="spawnSubagentFromTree(true)">派发子代理（默认干净上下文 s）</button>
+                <button class="btn btn-xs" onclick="spawnSubagentFromTree(false)">分叉新会话 (f)</button>
+                <button class="btn btn-xs btn-rose" onclick="openMergeView()">进入三步合并 (m)</button>
+              </div>
+            </div>
+            <div style="color:var(--subtle); font-size:12px;">${esc(curNode.summary)}</div>
+          </div>
+        ` : ""}
+      </div>
+    </div>
+  `;
+}
+
+function spawnSubagentFromTree(fresh) {
+  const curNode = state.treeNodes[state.treeIdx];
+  state.statusNotice = fresh
+    ? "已派发子代理（默认干净上下文 + 最小任务包），源会话不变"
+    : `已从「${curNode.title}」分叉独立新会话，源历史不变`;
+  render();
+}
+
+function advanceMergeFromStep1() {
+  const checkedCnt = state.mergeSources.filter(s => s.checked).length;
+  if (checkedCnt === 0) {
+    state.statusNotice = "请至少勾选 1 个要汇总的结论来源（按 Space 勾选）";
+    render();
+    return;
+  }
+  state.mergeStep = 2;
+  render();
+}
+
+function renderMergePane() {
+  const prevView = state.viewStack[state.viewStack.length - 1]?.centerMode || "code";
+  const checkedCnt = state.mergeSources.filter(s => s.checked).length;
+  return `
+    <div class="tui-win ${state.focusedPane === "code" ? "focused" : ""}" style="flex:1;" onclick="state.focusedPane='code'; render();">
+      <div class="tui-winbar">
+        <span>三步合并视图 · Step ${state.mergeStep}/3（已选 ${checkedCnt} 个来源）</span>
+        <span><kbd>j</kbd><kbd>k</kbd> · <kbd>Space</kbd> 勾选 · <kbd>Enter</kbd> 下一步 · <kbd>q</kbd> 返回 ${esc(prevView)}</span>
+      </div>
+      <div class="tui-win-body" style="padding:10px 14px; font-family:var(--sans);">
+        <div style="display:flex; gap:6px; margin-bottom:10px;">
+          ${[[1,"1. 选择来源"],[2,"2. 核对结论与冲突"],[3,"3. 编辑摘要并创建"]].map(([s, lbl]) => `
+            <button class="btn btn-xs ${state.mergeStep === s ? "active" : ""}" onclick="if(${s}>1 && state.mergeSources.filter(x=>x.checked).length===0){state.statusNotice='请至少勾选 1 个要汇总的结论来源'; render();} else {state.mergeStep=${s}; render();}">${lbl}</button>
+          `).join("")}
+        </div>
+        ${state.mergeStep === 1 ? state.mergeSources.map((src, i) => `
+          <div class="vlist-row ${state.mergeIdx === i ? "selected" : ""}" onclick="state.mergeIdx=${i}; state.mergeSources[${i}].checked=!state.mergeSources[${i}].checked; render();">
+            <span>[${src.checked ? "x" : " "}] <b>${esc(src.name)}</b> — <span style="color:var(--subtle);">${esc(src.note)}</span></span>
+          </div>
+        `).join("") + `<div style="margin-top:10px;"><button class="btn btn-xs btn-primary" style="${checkedCnt === 0 ? "opacity:0.45;" : ""}" onclick="advanceMergeFromStep1()">下一步：核对已选 (${checkedCnt}) →</button></div>`
+        : state.mergeStep === 2 ? `
+          <div style="padding:10px; background:var(--surface); border-radius:6px; border:1px solid var(--hl-med); margin-bottom:10px;">
+            <div><b>已选结论 (${checkedCnt} 项)：</b>${esc(state.mergeSources.filter(s => s.checked).map(s => s.name).join(" + "))}</div>
+            <div style="color:var(--subtle); margin-top:4px;"><b>汇总方式：</b>提炼结构化结论与证据链接开启新会话，不自动合并 Git 代码，也不修改源会话历史。</div>
+          </div>
+          <button class="btn btn-xs btn-primary" onclick="state.mergeStep=3; render();">下一步 (Enter) →</button>
+        ` : `
+          <pre class="pre-diagram" style="margin-bottom:10px;">${esc(state.mergeSummary)}</pre>
+          <div style="display:flex; gap:6px;">
+            <button class="btn btn-xs" onclick="openMergeScratch()">在可编辑 Buffer 中修改摘要 (e)</button>
+            <button class="btn btn-xs btn-primary" style="${checkedCnt === 0 ? "opacity:0.45;" : ""}" onclick="finishMerge()">✓ 基于 ${checkedCnt} 个来源创建新会话 (Enter)</button>
+          </div>
+        `}
+      </div>
+    </div>
+  `;
+}
+
+function openMergeScratch() {
+  state.overlay = { type: "scratch", purpose: "merge", returnPane: "code", text: state.mergeSummary };
+  render();
+}
+
+function finishMerge() {
+  const checked = state.mergeSources.filter(s => s.checked);
+  if (checked.length === 0) {
+    state.statusNotice = "未勾选任何合并来源，无法创建新会话";
+    render();
+    return;
+  }
+  const wsData = currentWsData();
+  const newId = "tm" + (wsData.threads.length + 1);
+  const newTitle = `合并会话 #${wsData.threads.length + 1} · 汇总实施`;
+  wsData.threads.push({
+    id: newId,
+    title: newTitle,
+    status: "idle",
+    pendingQuestion: false,
+    composerDraft: "",
+    composerRefs: [],
+    queue: { steering: [], followUp: [], system: [] },
+    chat: [{ role: "系统", text: `已汇总 ${checked.length} 个来源结论（${checked.map(s => s.name).join("；")}），源会话历史未改动。` }]
+  });
+  wsData.activeThreadId = newId;
+  state.viewStack = [];
+  state.centerMode = "code";
+  state.dockOpen = true;
+  state.dockTab = "chat";
+  state.statusNotice = `已创建并切换至「${newTitle}」`;
+  render();
+}
+
+function renderDockPane() {
+  const visibleComments = state.comments.filter(c => c.persisted !== "dismissed");
+  const draftIds = state.comments.filter(c => c.persisted === "draft").map(c => c.id);
+  const tabs = [
+    ["chat", "Chat"],
+    ["review", `Review (${visibleComments.length})`],
+    ["plan", "Plan"],
+    ["specs", "Specs"],
+    ["resources", "后台"]
+  ];
+
+  let bodyHtml = "";
+  if (state.dockTab === "review") {
+    const dest = SEND_TARGETS.find(t => t.id === state.commentTargetId) || SEND_TARGETS[0];
+    bodyHtml = `
+      <div class="tui-win-body">
+        <div style="padding:6px 10px; color:var(--subtle); font-family:var(--sans); font-size:11.5px; border-bottom:1px solid var(--hl-med); display:flex; justify-content:space-between; align-items:center;">
+          <span><kbd>j</kbd><kbd>k</kbd> · <kbd>Enter</kbd> 跳回对应侧 · <kbd>r</kbd> 解决/撤回</span>
+          <span style="cursor:pointer; color:var(--foam);" onclick="event.stopPropagation(); openTargetPicker()">目标: ${esc(dest.label.split("（")[0])} ▾</span>
+        </div>
+        ${visibleComments.map((c, idx) => {
+          const v = deriveCommentView(c);
+          const sideTag = c.side === "base" ? "Base" : "Mod";
+          return `
+            <div class="vlist-row ${state.dockIdx === idx ? "selected" : ""}"
+                 onclick="event.stopPropagation(); state.focusedPane='dock'; state.dockIdx=${idx}; previewCommentById('${c.id}'); render();">
+              <div style="min-width:0;">
+                <div>
+                  <span class="tag ${v.tagCls}">${v.label}</span>
+                  <code class="mono" style="margin-left:4px;">${sideTag}:L${c.line}</code>
+                  ${c.anchor === "outdated" ? `<span class="tag tag-gold">原文已变</span>` : ""}
+                </div>
+                <div style="color:var(--subtle); margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${esc(c.text)}</div>
+              </div>
+              <div style="display:flex; gap:4px; flex-shrink:0;">
+                <button class="btn btn-xs btn-quiet" onclick="event.stopPropagation(); jumpToCommentById('${c.id}')" title="跳转光标到代码侧 (Enter)">定位</button>
+                ${renderActionButtons(c)}
+              </div>
+            </div>
+          `;
+        }).join("")}
+        ${draftIds.length > 0 ? `<div style="padding:8px 10px;"><button class="btn btn-xs btn-primary" onclick="event.stopPropagation(); dispatchComments(${JSON.stringify(draftIds).replace(/"/g, "'")}, false)">发送草稿 (${draftIds.length}) → ${esc(dest.label.split("（")[0])}</button></div>` : ""}
+      </div>
+    `;
+  } else if (state.dockTab === "plan") {
+    bodyHtml = `
+      <div class="tui-win-body" style="padding:8px 10px; font-family:var(--sans);">
+        <div class="vlist-row"><span>✓ 1. 提取 Bearer 令牌格式校验</span><span class="tag tag-pine">已验证</span></div>
+        <div class="vlist-row selected"><span>● 2. 校验 exp 与 30s 时钟偏移容差</span><span class="tag tag-foam">进行中</span></div>
+        <div class="vlist-row"><span>○ 3. 补齐过期与篡改签名回归用例</span><span class="tag tag-dim">待执行</span></div>
+      </div>
+    `;
+  } else if (state.dockTab === "specs") {
+    bodyHtml = `
+      <div class="tui-win-body" style="padding:8px 10px; font-family:var(--sans);">
+        <div class="vlist-row selected"><span>goal-and-requirements</span><span class="tag tag-dim">产品目标</span></div>
+        <div class="vlist-row"><span>module-auth · 鉴权契约与错误边界</span><span class="tag tag-foam">已同步</span></div>
+      </div>
+    `;
+  } else if (state.dockTab === "resources") {
+    bodyHtml = `
+      <div class="tui-win-body" style="padding:8px 10px; font-family:var(--sans);">
+        <div class="vlist-row"><span>子代理 scout · 调用点扫描</span><span class="tag tag-pine">已完成</span></div>
+        <div class="vlist-row"><span>后台命令 · make test --watch</span><span class="tag tag-foam">运行中</span></div>
+        <div style="padding:8px 10px; font-size:11.5px; color:var(--subtle);">本轮交付产物：<code>jwt-edge-cases.spec.md</code>、<code>auth-flow.mmd</code></div>
+      </div>
+    `;
+  } else {
+    // Chat Tab: Unified Follow-up default when running (Fix #5)
+    const allQueued = [
+      ...state.queue.steering.map((it, idx) => ({ ...it, lane: "steering", idx, tag: "插话" })),
+      ...state.queue.followUp.map((it, idx) => ({ ...it, lane: "followUp", idx, tag: "后续" }))
+    ];
+    const firstQ = allQueued[0];
+    const queueStripHtml = firstQ ? `
+      <div class="dock-queue-strip" onclick="event.stopPropagation()">
+        <div class="dock-queue-text">
+          <span class="tag tag-foam">${firstQ.tag}${allQueued.length > 1 ? ` +${allQueued.length - 1}` : ""}</span>
+          <span style="margin-left:4px;">${esc(firstQ.text)}</span>
+        </div>
+        <div style="display:flex; gap:3px; flex-shrink:0;">
+          <button class="btn btn-xs btn-quiet" onclick="withdrawQueueItem('${firstQ.lane}', ${firstQ.idx})">撤回</button>
+          <button class="btn btn-xs btn-quiet" onclick="toggleShelf('queue')">队列(${allQueued.length})</button>
+        </div>
+      </div>
+    ` : "";
+
+    const isRunning = state.threadStatus === "running" || state.threadStatus === "needs_input";
+    const effMode = state.backend === "acp" ? "followUp" : state.runningEnterPref;
+    const primaryLabel = !isRunning ? "Send" : (effMode === "steer" ? "Steer" : "Follow-up");
+
+    const keyHint = !isRunning
+      ? `<span style="color:var(--muted); font-size:11px;"><kbd>Enter</kbd> 发送 · <kbd>Esc</kbd> 回代码</span>`
+      : state.backend === "acp"
+        ? `<span style="color:var(--muted); font-size:11px;"><kbd>Enter</kbd> 后续排队</span>`
+        : `<span style="color:var(--muted); font-size:11px;"><kbd>Enter</kbd> ${effMode === "followUp" ? "后续排队" : "插话"} · <kbd>Alt+Enter</kbd> ${effMode === "followUp" ? "插话" : "后续排队"}</span>`;
+
+    const menuHtml = state.composerMenuOpen ? `
+      <div class="menu-pop" onclick="event.stopPropagation()">
+        ${isRunning && state.backend === "pi" ? `<button onclick="submitComposer('steer')">↳ 本条作为下一步插话发送 (Steer)</button>` : ""}
+        ${isRunning && state.backend === "pi" ? `<button onclick="submitComposer('interrupt')">⚡ 立即打断并改做 (Interrupt)</button>` : ""}
+        ${state.backend === "pi" ? `<button onclick="runCompact()">🗜 压缩上下文 (Compact)</button>` : ""}
+        <button onclick="state.composerMenuOpen=false; openModelFloat();">⚙ 切换模型 (${esc(MODELS[state.activeModelIdx].id)})</button>
+        <button onclick="state.composerMenuOpen=false; openThreadTree();">🌿 分支树与合并视图</button>
+      </div>
+    ` : "";
+
+    const wsData = currentWsData();
+    const activeTh = currentThread();
+    const threadBarHtml = `
+      <div style="padding:5px 10px; background:#1b192b; border-bottom:1px solid var(--hl-med); font-family:var(--sans); font-size:11.5px; display:flex; justify-content:space-between; align-items:center; gap:6px;">
+        <span>发给：<b style="color:var(--rose);">${esc(activeTh.title)}</b></span>
+        ${wsData.threads.length > 1 ? `
+          <span style="display:flex; gap:4px;">
+            ${wsData.threads.map((th, ti) => `
+              <button class="btn btn-xs ${th.id === activeTh.id ? "active" : ""}" onclick="event.stopPropagation(); switchActiveThread('${th.id}')">#${ti + 1}</button>
+            `).join("")}
+          </span>
+        ` : `<span style="color:var(--muted); font-size:11px;">独立队列</span>`}
+      </div>
+    `;
+    const pendingAskBarHtml = state.pendingQuestion ? `
+      <div style="padding:6px 10px; background:rgba(246,193,119,0.12); border-bottom:1px solid rgba(246,193,119,0.4); font-family:var(--sans); font-size:11.5px; display:flex; justify-content:space-between; align-items:center; gap:6px;">
+        <span style="color:var(--gold);">⚠ AI 等你回答兼容策略问题（不强弹窗抢占编辑器）</span>
+        <button class="btn btn-xs btn-primary" onclick="event.stopPropagation(); openQuestionFloat()">打开回答 (Space ar)</button>
+      </div>
+    ` : "";
+
+    bodyHtml = `
+      ${threadBarHtml}
+      ${pendingAskBarHtml}
+      <div class="tui-win-body">
+        ${state.chat.map(m => `
+          <div class="chat-item">
+            <div class="chat-role"><span>${esc(m.role)}</span></div>
+            <div>${esc(m.text)} ${m.ref ? `<span class="file-ref" onclick="event.stopPropagation(); jumpToCode('${m.ref.file}', ${m.ref.line})">${esc(m.ref.file)}:${m.ref.line}</span>` : ""}</div>
+          </div>
+        `).join("")}
+      </div>
+      ${queueStripHtml}
+      <div class="composer" onclick="event.stopPropagation()">
+        ${menuHtml}
+        ${state.composerRefs.length ? `<div style="font-size:11px; color:var(--foam);">引用: ${esc(state.composerRefs.join(", "))}</div>` : ""}
+        <textarea id="chatTextarea" placeholder="输入问题或指令（代码区按 Space a i 直接聚焦此处）…"
+          onfocus="state.focusedPane='dock';"
+          oninput="state.composerDraft=this.value"
+          onkeydown="onComposerKey(event)">${esc(state.composerDraft)}</textarea>
+        <div class="composer-bar">
+          ${keyHint}
+          <div style="display:flex; gap:5px; align-items:center;">
+            ${isRunning ? `<button class="btn btn-xs btn-stop" onclick="stopRunningThread()">Stop</button>` : ""}
+            <button class="btn btn-xs btn-primary" onclick="submitComposer('${!isRunning ? "send" : effMode}')">${primaryLabel}</button>
+            <button class="btn btn-xs" title="更多会话操作" onclick="state.composerMenuOpen=!state.composerMenuOpen; render();">⋯</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="tui-win win-dock ${state.focusedPane === "dock" ? "focused" : ""}" onclick="state.focusedPane='dock'; render();">
+      <div class="tui-winbar">
+        <span>Agent · ${MODELS[state.activeModelIdx].id}</span>
+        <button class="btn btn-xs btn-quiet" onclick="event.stopPropagation(); toggleDock()">隐藏</button>
+      </div>
+      <div class="dock-tabs">
+        ${tabs.map(([id, lbl]) => `
+          <div class="dock-tab ${state.dockTab === id ? "active" : ""}" onclick="event.stopPropagation(); state.dockTab='${id}'; render();">${lbl}</div>
+        `).join("")}
+      </div>
+      ${bodyHtml}
+    </div>
+  `;
+}
+
+function renderShelf() {
+  const shelf = document.getElementById("tuiShelf");
+  shelf.classList.toggle("hidden", !state.shelfOpen);
+  if (!state.shelfOpen) return;
+
+  const qTotal = state.queue.steering.length + state.queue.followUp.length;
+  const dest = SEND_TARGETS.find(t => t.id === state.commentTargetId) || SEND_TARGETS[0];
+  let rowsHtml = "";
+
+  if (state.shelfTab === "comments") {
+    rowsHtml = state.comments.map((c, i) => {
+      const v = deriveCommentView(c);
+      const sideStr = c.side === "base" ? "Base" : "Mod";
+      return `
+        <div class="vlist-row ${state.shelfIdx === i ? "selected" : ""}"
+             onclick="state.focusedPane='shelf'; state.shelfIdx=${i}; previewCommentById('${c.id}'); render();">
+          <div style="min-width:0;">
+            <span class="mono">[${c.selected && c.persisted === "draft" ? "x" : " "}] ${sideStr}:L${c.line}</span>
+            <span class="tag ${v.tagCls}" style="margin:0 5px;">${v.label}</span>
+            ${c.targetLabel ? `<span class="tag tag-dim">→ ${esc(c.targetLabel)}</span> ` : ""}
+            ${c.anchor === "outdated" ? `<span class="tag tag-gold">原文已变</span> ` : ""}
+            <span>${esc(c.text)}</span>
+          </div>
+          <div style="display:flex; gap:4px; flex-shrink:0;">
+            <button class="btn btn-xs btn-quiet" onclick="event.stopPropagation(); jumpToCommentById('${c.id}')" title="跳转光标到代码窗口 (o)">定位</button>
+            ${renderActionButtons(c)}
+          </div>
+        </div>
+      `;
+    }).join("");
+  } else if (state.shelfTab === "queue") {
+    const items = [
+      ...state.queue.steering.map((it, idx) => ({ ...it, lane: "steering", idx, label: "下一步插话" })),
+      ...state.queue.followUp.map((it, idx) => ({ ...it, lane: "followUp", idx, label: "后续排队" }))
+    ];
+    rowsHtml = items.length ? items.map((it, i) => `
+      <div class="vlist-row ${state.shelfIdx === i ? "selected" : ""}" onclick="state.focusedPane='shelf'; state.shelfIdx=${i}; render();">
+        <div><span class="tag tag-foam">${it.label}</span> <span style="margin-left:6px;">${esc(it.text)}</span></div>
+        <button class="btn btn-xs" onclick="event.stopPropagation(); withdrawQueueItem('${it.lane}', ${it.idx})">撤回编辑 (r)</button>
+      </div>
+    `).join("") : `<div style="padding:8px 12px; color:var(--muted); font-family:var(--sans);">当前无待消费的排队消息</div>`;
+  } else {
+    rowsHtml = `<div style="padding:8px 12px; color:var(--muted); font-family:var(--sans);">复用 Neovim 原生诊断与终端。</div>`;
+  }
+
+  const selectedDraftIds = state.comments.filter(c => c.selected && c.persisted === "draft").map(c => c.id);
+  const destShortLabel = dest.id === "current" ? currentThread().title : dest.label.split("（")[0];
+
+  shelf.innerHTML = `
+    <div class="shelf-header" onclick="state.focusedPane='shelf'; render();">
+      <div style="display:flex; gap:12px; align-items:center;">
+        <span style="cursor:pointer; color:${state.shelfTab==='comments'?'var(--rose)':'var(--muted)'};" onclick="event.stopPropagation(); state.shelfTab='comments'; state.shelfIdx=0; render();">评论架 (${state.comments.length})</span>
+        <span style="cursor:pointer; color:${state.shelfTab==='queue'?'var(--rose)':'var(--muted)'};" onclick="event.stopPropagation(); state.shelfTab='queue'; state.shelfIdx=0; render();">排队消息 (${qTotal})</span>
+        <span style="cursor:pointer; color:${state.shelfTab==='diagnostics'?'var(--rose)':'var(--muted)'};" onclick="event.stopPropagation(); state.shelfTab='diagnostics'; render();">诊断</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:6px;">
+        ${state.shelfTab === "comments" ? `
+          <button class="btn btn-xs" onclick="event.stopPropagation(); openTargetPicker()" title="按 t 选择批量发送目标">批量目标：${esc(destShortLabel)} ▾ (t)</button>
+          <button class="btn btn-xs btn-primary" style="${selectedDraftIds.length === 0 ? "opacity:0.45;" : ""}" onclick="event.stopPropagation(); dispatchComments(${JSON.stringify(selectedDraftIds).replace(/"/g, "'")}, false)">发送已勾选 (${selectedDraftIds.length}) → ${esc(destShortLabel)}</button>
+        ` : ""}
+        <span style="color:var(--muted); font-size:11px;"><kbd>j</kbd><kbd>k</kbd> · <kbd>Space</kbd> 勾选 · <kbd>t</kbd> 目标 · <kbd>Enter</kbd> 发送 · <kbd>q</kbd> 收起</span>
+        <button class="btn btn-xs btn-quiet" onclick="event.stopPropagation(); toggleShelf()">×</button>
+      </div>
+    </div>
+    <div class="tui-win-body">${rowsHtml}</div>
+  `;
+}
+
+function renderStatusAndCmd() {
+  const ws = currentWs();
+  const drafts = state.comments.filter(c => c.persisted === "draft").length;
+  const processing = state.comments.filter(c => deriveCommentView(c).key === "processing").length;
+  const pendingAck = state.comments.filter(c => deriveCommentView(c).key === "pending_ack").length;
+  const queued = state.queue.steering.length + state.queue.followUp.length;
+  const modeStr = state.visualAnchor !== null ? "VISUAL" : "NORMAL";
+  const sideBadge = state.centerMode === "diff" ? ` [${state.diffSide === "base" ? "Base" : "Modified"}]` : "";
+
+  document.getElementById("tuiStatusline").innerHTML = `
+    <div>
+      <b style="color:var(--rose);">${modeStr}</b>
+      <span style="margin-left:10px;">${esc(ws.file)}${sideBadge}${state.bufferModified ? " [+]" : ""} · L${activeCursorLine()}</span>
+    </div>
+    <div style="display:flex; gap:12px; align-items:center;">
+      <span>草稿: <b>${drafts}</b></span>
+      ${processing ? `<span style="color:var(--iris);">处理中: <b>${processing}</b></span>` : ""}
+      ${pendingAck ? `<span style="color:var(--rose);">待确认: <b>${pendingAck}</b></span>` : ""}
+      <span>排队: <b>${queued}</b></span>
+      <span style="color:${ws.verified ? "var(--foam)" : "var(--muted)"};">${ws.verified ? "已验证 ✓" : "未验证"}</span>
+    </div>
+  `;
+
+  const chordHint = leaderSeq === "space" ? "<Space>…" : leaderSeq === "space_a" ? "<Space>a…" : `焦点: ${state.focusedPane}`;
+  document.getElementById("tuiCmdline").innerHTML = `
+    <span>${esc(state.statusNotice)}</span>
+    <span style="color:var(--iris);">${esc(chordHint)}</span>
+  `;
+}
+
+function renderOverlay() {
+  const ovWrap = document.getElementById("tuiOverlay");
+  if (!state.overlay) {
+    ovWrap.classList.add("hidden");
+    ovWrap.innerHTML = "";
+    return;
+  }
+  ovWrap.classList.remove("hidden");
+  const ov = state.overlay;
+
+  if (ov.type === "selection_ask") {
+    ovWrap.innerHTML = `
+      <div class="nvim-float">
+        <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+          <b>向「${esc(currentThread().title)}」提问 · <code class="mono">${esc(ov.ref)}</code></b>
+          <span style="color:var(--muted); font-size:11px;"><kbd>Enter</kbd> 发送并留代码区 · <kbd>Esc</kbd> 取消</span>
+        </div>
+        <input id="overlayInput" type="text" value="${esc(ov.text)}" placeholder="输入你的真实问题（如：为什么这里要兼容旧写法？）…"
+               style="width:100%; padding:6px 8px; background:var(--base); border:1px solid var(--hl-high); border-radius:5px;"
+               onkeydown="if(event.key==='Enter'){event.preventDefault(); submitSelectionAsk(this.value);} if(event.key==='Escape'){event.preventDefault(); closeOverlay();}" />
+      </div>
+    `;
+  } else if (ov.type === "comment_quick") {
+    ovWrap.innerHTML = `
+      <div class="nvim-float">
+        <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+          <b>${ov.editId ? `编辑评论 ${ov.editId}` : `添加行级评论 (${ov.side === "base" ? "Base" : "Modified"} L${ov.line})`}</b>
+          <span style="color:var(--muted); font-size:11px;"><kbd>Enter</kbd> 保存 · <kbd>Esc</kbd> 取消</span>
+        </div>
+        <input id="overlayInput" type="text" value="${esc(ov.text)}" placeholder="输入评论内容…"
+               style="width:100%; padding:6px 8px; background:var(--base); border:1px solid var(--hl-high); border-radius:5px;"
+               onkeydown="if(event.key==='Enter'){event.preventDefault(); saveCommentFromOverlay(this.value);} if(event.key==='Escape'){event.preventDefault(); closeOverlay();}" />
+      </div>
+    `;
+  } else if (ov.type === "scratch") {
+    ovWrap.innerHTML = `
+      <div class="nvim-scratch">
+        <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+          <b>${ov.purpose === "merge" ? "编辑合并摘要 (可编辑 Buffer)" : `多行评论 Buffer (${ov.side === "base" ? "Base" : "Modified"} L${ov.line})`}</b>
+          <span style="color:var(--muted); font-size:11px;">关闭后归还焦点至 ${esc(ov.returnPane)}</span>
+        </div>
+        <textarea id="overlayInput" style="width:100%; min-height:110px; background:var(--canvas); border:1px solid var(--hl-high); border-radius:5px; padding:8px; font-family:var(--mono);">${esc(ov.text)}</textarea>
+        <div style="display:flex; justify-content:flex-end; gap:6px; margin-top:8px;">
+          <button class="btn btn-xs" onclick="closeOverlay()">放弃 (Esc)</button>
+          <button class="btn btn-xs btn-primary" onclick="commitScratch()">保存并恢复焦点 (:wq)</button>
+        </div>
+      </div>
+    `;
+  } else if (ov.type === "target_picker") {
+    const targets = availableSendTargets();
+    ovWrap.innerHTML = `
+      <div class="nvim-float">
+        <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+          <b>选择评论发送目标与方式</b>
+          <span style="color:var(--muted); font-size:11px;"><kbd>j</kbd><kbd>k</kbd> 移动 · <kbd>Enter</kbd> 确认 · <kbd>Esc</kbd> 关闭</span>
+        </div>
+        ${targets.map((t, i) => `
+          <div class="vlist-row ${ov.idx === i ? "selected" : ""}" onclick="selectSendTarget('${t.id}')">
+            <span>${esc(t.label)}</span>
+            ${state.commentTargetId === t.id ? `<span class="tag tag-foam">当前选择</span>` : ""}
+          </div>
+        `).join("")}
+      </div>
+    `;
+  } else if (ov.type === "ws_picker") {
+    const list = Object.values(WORKSPACES);
+    ovWrap.innerHTML = `
+      <div class="nvim-float">
+        <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+          <b>切换 Workspace</b>
+          <span style="color:var(--muted); font-size:11px;"><kbd>j</kbd><kbd>k</kbd> · <kbd>Enter</kbd> 原地切换 · <kbd>t</kbd> 新 Tab · <kbd>Esc</kbd> 关闭</span>
+        </div>
+        ${list.map((w, i) => `
+          <div class="vlist-row ${ov.idx === i ? "selected" : ""}" onclick="applyWorkspaceChoice('${w.id}', false)">
+            <span><b>${esc(w.name)}</b> · <span style="color:var(--subtle);">${esc(w.kind)}</span></span>
+            <button class="btn btn-xs" onclick="event.stopPropagation(); applyWorkspaceChoice('${w.id}', true)">新 Tab 打开 (t)</button>
+          </div>
+        `).join("")}
+      </div>
+    `;
+  } else if (ov.type === "model") {
+    ovWrap.innerHTML = `
+      <div class="nvim-float">
+        <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+          <b>切换当前会话模型</b>
+          <span style="color:var(--muted); font-size:11px;"><kbd>j</kbd><kbd>k</kbd> 移动 · <kbd>Enter</kbd> 确认 · <kbd>Esc</kbd> 关闭</span>
+        </div>
+        ${MODELS.map((m, i) => `
+          <div class="vlist-row ${ov.idx === i ? "selected" : ""}" onclick="confirmModelChoice(${i})">
+            <span>${esc(m.label)}</span>
+            ${state.activeModelIdx === i ? `<span class="tag tag-foam">当前</span>` : ""}
+          </div>
+        `).join("")}
+      </div>
+    `;
+  } else if (ov.type === "question") {
+    const opts = [
+      ["方案 A（推荐）：大小写无关 Bearer + 30s 容差", "header:lower():match('^bearer%s+')"],
+      ["方案 B：双 Header 兼容过渡期", "header or req.headers['x-auth-token']"]
+    ];
+    ovWrap.innerHTML = `
+      <div class="nvim-float">
+        <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+          <b>需要你的确认 · 鉴权兼容方案对比</b>
+          <span class="tag tag-gold">j/k/1/2 选择 · Enter 确认</span>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:8px 0;">
+          ${opts.map((o, i) => `
+            <div style="padding:8px; border-radius:6px; cursor:pointer; background:var(--base); border:1px solid ${ov.idx===i?'var(--foam)':'var(--hl-med)'};"
+                 onclick="state.overlay.idx=${i}; confirmQuestion();">
+              <div style="font-weight:600; font-size:12px;">[${i + 1}] ${esc(o[0])}</div>
+              <div class="mono" style="font-size:11px; color:var(--foam); margin-top:4px;">${esc(o[1])}</div>
+            </div>
+          `).join("")}
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:6px;">
+          <button class="btn btn-xs" onclick="closeOverlay()">稍后 (Esc)</button>
+          <button class="btn btn-xs btn-primary" onclick="confirmQuestion()">确认 (Enter)</button>
+        </div>
+      </div>
+    `;
+  }
+}
+
+function commitScratch() {
+  const val = document.getElementById("overlayInput")?.value || "";
+  if (state.overlay?.purpose === "merge") {
+    state.mergeSummary = val;
+    closeOverlay();
+  } else {
+    saveCommentFromOverlay(val);
+  }
+}
+
+function renderDebug() {
+  if (!state.debugOpen) return;
+  document.getElementById("colsLabel").textContent = state.totalCols;
+  document.getElementById("effColsLabel").textContent = effectiveCodeCols();
+  document.getElementById("backendLabel").textContent = state.backend === "pi" ? "Pi" : "ACP";
+  document.getElementById("enterPrefLabel").textContent = state.runningEnterPref === "followUp" ? "Follow-up" : "Steer";
+
+  document.getElementById("debugKv").innerHTML = `
+    focused = ${state.focusedPane} | center = ${state.centerMode} | stack = [${state.viewStack.map(v=>v.centerMode).join("→")}]<br/>
+    diff_side = ${state.diffSide} | eff_cols = ${effectiveCodeCols()} (${isNarrowForReview() ? "窄屏单处评论" : "宽屏三栏"})<br/>
+    target = ${state.commentTargetId} | running_enter = ${state.runningEnterPref}
+  `;
+  document.getElementById("debugLogs").innerHTML = state.logs.map(l => `
+    <div class="log-row ${l.kind}">${esc(l.text)}</div>
+  `).join("");
+}
+
+/* ==================== SCOPED NEOVIM KEYBOARD ENGINE ==================== */
+function resetLeaderSeq() {
+  leaderSeq = "";
+  if (leaderTimer) { clearTimeout(leaderTimer); leaderTimer = null; }
+}
+
+function armLeaderSeq(next) {
+  leaderSeq = next;
+  if (leaderTimer) clearTimeout(leaderTimer);
+  leaderTimer = setTimeout(() => { leaderSeq = ""; renderStatusAndCmd(); }, 1100);
+  renderStatusAndCmd();
+}
+
+function onComposerKey(e) {
+  if (e.key === "Escape") {
+    e.preventDefault();
+    e.target.blur();
+    state.focusedPane = "code";
+    state.statusNotice = "已退出输入框回到代码区";
+    render();
+    return;
+  }
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    const isRunning = state.threadStatus === "running" || state.threadStatus === "needs_input";
+    if (!isRunning) submitComposer("send");
+    else if (e.altKey || e.metaKey) submitComposer(state.runningEnterPref === "followUp" ? "steer" : "followUp");
+    else submitComposer(state.runningEnterPref);
+  }
+}
+
+document.addEventListener("keydown", (e) => {
+  if (state.pageView !== "sim") return;
+  if (e.key === "Shift" || e.key === "Control" || e.key === "Alt" || e.key === "Meta") return;
+
+  const tag = e.target?.tagName;
+  if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") {
+    if (e.key === "Escape" && state.overlay) { e.preventDefault(); closeOverlay(); }
+    return;
+  }
+
+  // 1. Complete Keyboard Navigation for ALL Modal Floats (ws_picker, model, target_picker, question)
+  if (state.overlay) {
+    if (e.key === "Escape" || e.key === "q") { e.preventDefault(); closeOverlay(); return; }
+    const ov = state.overlay;
+    if (ov.type === "ws_picker") {
+      const ids = Object.keys(WORKSPACES);
+      if (e.key === "j") { ov.idx = Math.min(ids.length - 1, ov.idx + 1); render(); }
+      else if (e.key === "k") { ov.idx = Math.max(0, ov.idx - 1); render(); }
+      else if (e.key === "Enter") applyWorkspaceChoice(ids[ov.idx], false);
+      else if (e.key === "t") applyWorkspaceChoice(ids[ov.idx], true);
+    } else if (ov.type === "model") {
+      if (e.key === "j") { ov.idx = Math.min(MODELS.length - 1, ov.idx + 1); render(); }
+      else if (e.key === "k") { ov.idx = Math.max(0, ov.idx - 1); render(); }
+      else if (e.key === "Enter") confirmModelChoice(ov.idx);
+    } else if (ov.type === "target_picker") {
+      const targets = availableSendTargets();
+      if (e.key === "j") { ov.idx = Math.min(targets.length - 1, ov.idx + 1); render(); }
+      else if (e.key === "k") { ov.idx = Math.max(0, ov.idx - 1); render(); }
+      else if (e.key === "Enter") selectSendTarget(targets[ov.idx].id);
+    } else if (ov.type === "question") {
+      if (e.key === "1" || e.key === "h" || e.key === "k") { ov.idx = 0; render(); }
+      else if (e.key === "2" || e.key === "l" || e.key === "j") { ov.idx = 1; render(); }
+      else if (e.key === "Enter") confirmQuestion();
+    }
+    return;
+  }
+
+  // 2. Standard Window Navigation (<C-w>h/j/k/l in Neovim; Ctrl+h/j/k/l in browser sandbox)
+  if (e.ctrlKey && ["h", "j", "k", "l"].includes(e.key)) {
+    e.preventDefault();
+    resetLeaderSeq();
+    if (e.key === "h") {
+      if (state.focusedPane === "dock") { state.focusedPane = "code"; }
+      else if (state.centerMode === "diff" && state.diffSide === "modified" && !isNarrowForReview()) { state.diffSide = "base"; }
+      else if (state.leftNavOpen) { state.focusedPane = "nav"; }
+    } else if (e.key === "l") {
+      if (state.focusedPane === "nav") { state.focusedPane = "code"; }
+      else if (state.focusedPane === "code" && state.centerMode === "diff" && state.diffSide === "base" && !isNarrowForReview()) { state.diffSide = "modified"; }
+      else if (state.dockOpen) { state.focusedPane = "dock"; }
+    } else if (e.key === "j" && state.shelfOpen) {
+      state.focusedPane = "shelf";
+    } else if (e.key === "k" && state.focusedPane === "shelf") {
+      state.focusedPane = "code";
+    }
+    render();
+    return;
+  }
+
+  // 3. <leader>a… (<Space>a…) Global Plugin Prefix Sequence
+  if (leaderSeq === "space_a") {
+    resetLeaderSeq();
+    e.preventDefault();
+    if (e.key === "c") openCommentCreator(false);
+    else if (e.key === "C") openCommentCreator(true);
+    else if (e.key === "s") sendFromCode(false);
+    else if (e.key === "S") sendFromCode(true);
+    else if (e.key === "d") enterDiffReview();
+    else if (e.key === "b" && state.centerMode === "diff") { state.diffSide = state.diffSide === "base" ? "modified" : "base"; render(); }
+    else if (e.key === "l") toggleShelf("comments");
+    else if (e.key === "q") toggleShelf("queue");
+    else if (e.key === "t") openThreadTree();
+    else if (e.key === "m") openMergeView();
+    else if (e.key === "w") openWorkspacePicker();
+    else if (e.key === "i") focusChatInput();
+    else if (e.key === "r") openQuestionFloat();
+    else if (e.key === "M") openModelFloat();
+    else if (e.key === "n") toggleLeftNav();
+    else if (e.key === "a") toggleDock();
+    return;
+  }
+  if (leaderSeq === "space") {
+    if (e.key === "a") { e.preventDefault(); armLeaderSeq("space_a"); return; }
+    resetLeaderSeq();
+  }
+
+  const inEditableCode = state.focusedPane === "code" && (state.centerMode === "code" || state.centerMode === "diff");
+
+  // Start <leader> (<Space>) in editable code/diff buffers
+  if (inEditableCode && e.key === " ") {
+    e.preventDefault();
+    armLeaderSeq("space");
+    return;
+  }
+
+  // 4. Plugin Read-Only Buffers ONLY: local short keys (j/k/Space/Enter/p/t/r/d/q)
+  if (state.focusedPane === "shelf" && state.shelfOpen) {
+    if (state.shelfTab === "comments") {
+      const c = state.comments[state.shelfIdx];
+      if (e.key === "j") { state.shelfIdx = Math.min(state.comments.length - 1, state.shelfIdx + 1); previewCommentLocation(state.comments[state.shelfIdx]); render(); }
+      else if (e.key === "k") { state.shelfIdx = Math.max(0, state.shelfIdx - 1); previewCommentLocation(state.comments[state.shelfIdx]); render(); }
+      else if (e.key === "o") { if (c) jumpToCommentLocation(c); }
+      else if (e.key === " ") { e.preventDefault(); if (c && c.persisted === "draft") { c.selected = !c.selected; render(); } }
+      else if (e.key === "t") { openTargetPicker(); }
+      else if (e.key === "d" && c) { handleCommentAction(c.id, "dismiss"); }
+      else if (e.key === "r" && c) {
+        const v = deriveCommentView(c);
+        if (v.key === "pending_ack") handleCommentAction(c.id, "resolve");
+        else if (v.key === "resolved") handleCommentAction(c.id, "reopen");
+        else if (v.key === "queued") handleCommentAction(c.id, "withdraw");
+      } else if (e.key === "Enter") {
+        const ids = state.comments.filter(x => x.selected && x.persisted === "draft").map(x => x.id);
+        dispatchComments(ids, false);
+      } else if (e.key === "S") {
+        const ids = state.comments.filter(x => x.selected && x.persisted === "draft").map(x => x.id);
+        dispatchComments(ids, true);
+      } else if (e.key === "q") { toggleShelf(); }
+    } else if (state.shelfTab === "queue") {
+      const total = state.queue.steering.length + state.queue.followUp.length;
+      if (e.key === "j") { state.shelfIdx = Math.min(Math.max(0, total - 1), state.shelfIdx + 1); render(); }
+      else if (e.key === "k") { state.shelfIdx = Math.max(0, state.shelfIdx - 1); render(); }
+      else if (e.key === "r" && total > 0) {
+        if (state.shelfIdx < state.queue.steering.length) withdrawQueueItem("steering", state.shelfIdx);
+        else withdrawQueueItem("followUp", state.shelfIdx - state.queue.steering.length);
+      } else if (e.key === "q") { toggleShelf(); }
+    }
+    return;
+  }
+
+  if (state.focusedPane === "nav" && state.leftNavOpen) {
+    const wsIds = Object.keys(WORKSPACES);
+    const ths = currentWsData().threads;
+    const maxLen = state.leftNavKind === "threads" ? ths.length : (state.leftNavKind === "artifacts" ? 3 : 2);
+    if (e.key === "j") { state.leftNavIdx = Math.min(Math.max(0, maxLen - 1), state.leftNavIdx + 1); render(); }
+    else if (e.key === "k") { state.leftNavIdx = Math.max(0, state.leftNavIdx - 1); render(); }
+    else if (e.key === "Enter" && state.leftNavKind === "workspaces") applyWorkspaceChoice(wsIds[state.leftNavIdx] || "auth", false);
+    else if (e.key === "Enter" && state.leftNavKind === "threads" && ths[state.leftNavIdx]) switchActiveThread(ths[state.leftNavIdx].id);
+    else if (e.key === "t" && state.leftNavKind === "workspaces") applyWorkspaceChoice(wsIds[state.leftNavIdx] || "auth", true);
+    else if (e.key === "q") toggleLeftNav();
+    return;
+  }
+
+  if (state.focusedPane === "dock" && state.dockOpen) {
+    if (e.key === "i" && state.dockTab === "chat") { e.preventDefault(); focusChatInput(); return; }
+    if (state.dockTab === "review") {
+      const list = state.comments.filter(x => x.persisted !== "dismissed");
+      const c = list[state.dockIdx];
+      if (e.key === "j") { state.dockIdx = Math.min(Math.max(0, list.length - 1), state.dockIdx + 1); previewCommentLocation(list[state.dockIdx]); render(); }
+      else if (e.key === "k") { state.dockIdx = Math.max(0, state.dockIdx - 1); previewCommentLocation(list[state.dockIdx]); render(); }
+      else if (e.key === "t") openTargetPicker();
+      else if (e.key === "S") {
+        const draftIds = state.comments.filter(x => x.persisted === "draft").map(x => x.id);
+        dispatchComments(c && c.persisted === "draft" ? [c.id] : draftIds, true);
+      }
+      else if (e.key === "Enter" && c) jumpToCommentLocation(c);
+      else if (e.key === "r" && c) {
+        const v = deriveCommentView(c);
+        if (v.key === "pending_ack") handleCommentAction(c.id, "resolve");
+        else if (v.key === "resolved") handleCommentAction(c.id, "reopen");
+        else if (v.key === "queued") handleCommentAction(c.id, "withdraw");
+      } else if (e.key === "q") { state.focusedPane = "code"; render(); }
+    }
+    return;
+  }
+
+  if (state.centerMode === "tree") {
+    if (e.key === "j") { state.treeIdx = Math.min(state.treeNodes.length - 1, state.treeIdx + 1); render(); }
+    else if (e.key === "k") { state.treeIdx = Math.max(0, state.treeIdx - 1); render(); }
+    else if (e.key === "p") { state.treePreviewOpen = !state.treePreviewOpen; render(); }
+    else if (e.key === "s") spawnSubagentFromTree(true);
+    else if (e.key === "f") spawnSubagentFromTree(false);
+    else if (e.key === "m") openMergeView();
+    else if (e.key === "q") popCenterView();
+    return;
+  }
+
+  if (state.centerMode === "merge") {
+    if (e.key === "j") { state.mergeIdx = Math.min(state.mergeSources.length - 1, state.mergeIdx + 1); render(); }
+    else if (e.key === "k") { state.mergeIdx = Math.max(0, state.mergeIdx - 1); render(); }
+    else if (e.key === " " && state.mergeStep === 1) { e.preventDefault(); state.mergeSources[state.mergeIdx].checked = !state.mergeSources[state.mergeIdx].checked; render(); }
+    else if (e.key === "e" && state.mergeStep === 3) openMergeScratch();
+    else if (e.key === "Enter") {
+      if (state.mergeStep === 1) advanceMergeFromStep1();
+      else if (state.mergeStep === 2) { state.mergeStep = 3; render(); }
+      else finishMerge();
+    }
+    else if (e.key === "q") popCenterView();
+    return;
+  }
+
+  // 5. Editable Code / Diff Buffer: ONLY standard Vim cursor/visual keys; c/r/gd/gt/gq NOT hijacked!
+  if (e.key === "Escape") {
+    state.visualAnchor = null;
+    state.composerMenuOpen = false;
+    render();
+  } else if (e.key === "j") {
+    setActiveCursorLine(activeCursorLine() + 1);
+    render();
+  } else if (e.key === "k") {
+    setActiveCursorLine(activeCursorLine() - 1);
+    render();
+  } else if (e.key === "v") {
+    state.visualAnchor = state.visualAnchor === null ? activeCursorLine() : null;
+    render();
+  } else if (["c", "C", "r", "g"].includes(e.key)) {
+    state.statusNotice = `原生 Vim 键 '${e.key}' 未被覆盖 · pide 操作请按 Space a …（如 Space a c 评论，Space a s 发送）`;
+    renderStatusAndCmd();
+  }
+});
+
+resetAll();
+</script>
+</body>
+</html>
