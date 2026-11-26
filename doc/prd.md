@@ -2,10 +2,10 @@
 
 - **文档状态**：Draft
 - **产品名称**：pide.nvim
-- **产品形态**：Neovim 中的 Agentic IDE
+- **产品形态**：Neovim 0.12+ 原生 Agentic IDE（交互规格原型见 [`doc/ui.html`](./ui.html)）
 - **主要 Agent**：Pi coding agent
 - **扩展方向**：通过统一能力模型兼容支持 ACP 的其他 Agent
-- **需求基线**：覆盖 ThinkRail 的主要产品能力，并增加代码评论、Thread 分叉与合并等 Neovim 原生工作流
+- **需求基线**：覆盖项目管理、隔离工作区、Agent 会话、规划、审查与交付的完整开发闭环，并提供代码评论、Thread 分叉与合并等 Neovim 原生工作流
 
 ---
 
@@ -31,13 +31,13 @@ pide 让用户不离开 Neovim，就能完成从理解项目、讨论方案、�
 
 ### 2.1 核心目标
 
-1. **完整开发闭环**：覆盖 ThinkRail 的 workspaces、sessions、Spec、TODO、Review、Artifacts、Subagents、Background Commands、PR 和产品化能力。
-2. **代码与讨论双向连接**：用户可以直接在代码或 diff 上留 comment，并将单条或一批 comment 连同精确上下文发送给 Agent。
+1. **完整开发闭环**：支持项目与工作区管理、Agent 会话、Spec、共享计划、代码审查、产物管理、子代理、后台命令和 PR 交付。
+2. **代码与讨论双向连接**：用户可以直接在代码或 diff 上留行级 comment，勾选不同草稿子集连同精确上下文分批发送给目标 Thread。
 3. **可分叉的 Agent 工作**：可以从当前 thread 或指定历史节点创建子代理任务，也可以将多个 thread 的有效上下文合并成新的工作 thread。
 4. **Neovim 原生体验**：代码区始终是工作中心，Agent 面板服务于代码，不迫使大家在独立聊天应用中切换上下文。
 5. **Pi 优先**：完整复用 Pi 的模型、会话、工具、skills、extensions、compaction、认证和状态，不另建 Agent 引擎。
 6. **ACP 可扩展**：通用聊天、上下文、评论、workspace 和 review 不绑定 Pi；其他 ACP Agent 按能力接入并降级。
-7. **少而有效的 skills**：合并 ThinkRail、Matt Pocock Skills 和 pstack 的重复能力，形成一组小型、可组合的核心工作流。
+7. **少而有效的 skills**：整合重复能力，形成一组小型、可组合的核心工作流，覆盖设计、执行、验证、审查与交付。
 8. **复用现有 Pi extensions**：支持安装和管理已有 Pi package/extension，不要求为 pide 单独开发扩展体系。
 
 ### 2.2 产品原则
@@ -63,8 +63,8 @@ pide 让用户不离开 Neovim，就能完成从理解项目、讨论方案、�
 
 1. 在已有代码库中建立长期 Spec，并让后续 Agent 遵循。
 2. 从一个 issue 或想法开始，先讨论产品和设计，再实施。
-3. 阅读代码或 diff 时留下评论，既可单条立即发送，也可积攒后批量发送给 Pi。
-4. 将单条或一批评论从当前 thread 分叉为独立任务并行处理，逐条确认结果后将有效结论合并成新的实施 thread。
+3. 阅读代码或 diff 时通过 `<Space>ac` 留下行级评论，积攒草稿后按需勾选不同子集分别投递给不同的 Thread 或新建 Thread。
+4. 通过显式 Fork 或拆分 skill 从当前 thread 创建关联子 Thread 并行处理，完成后选择有效结论通过公共前缀或 handoff 合并成新的实施 thread。
 5. 从当前 thread 的某个历史点分叉，让子代理尝试另一种实现。
 6. 将“调查”“方案 A”“方案 B”三个 thread 的有效结论合并成一个新的实施 thread。
 7. 在独立 worktree 中并行开发多个 feature，互不污染主工作区。
@@ -81,33 +81,30 @@ pide 让用户不离开 Neovim，就能完成从理解项目、讨论方案、�
 | Thread | 一个独立的 Agent 会话及其持久化历史，对应 Pi 的 session。产品文档与 UI 统一使用 Thread。 |
 | Thread Branch | 同一个 Thread 内部的一条历史路径，不是独立 Thread，也不同于 Git branch。 |
 | Turn | 一次模型响应及其产生的工具调用和结果。 |
-| Comment | 用户对文件、diff、spec、artifact 或具体文本片段留下的结构化评论。 |
-| Comment Batch | 一组尚未发送的 draft comments，可统一排序、编辑和发送。 |
-| Plan | Agent 与用户共享的任务和步骤计划。 |
-| Task | 一个独立工作单元，可以由主 Agent、子代理或后台命令执行。 |
-| Artifact | Agent 产生的 spec、设计、报告、图表、截图、验证证据、PR body 等持久文件。 |
+| Comment | 用户对文件、diff、spec 或 artifact 留下的结构化行级评论。 |
+| Comment Batch | 一组勾选待发的 draft comments，可发往当前、已有或新建 Thread。 |
+| Plan | 当前 Thread 内嵌的步骤计划。 |
+| Artifact | Agent 产生的 spec、设计、报告、验证证据、PR body 等持久文件。 |
 | Spec | 描述产品目标、架构、模块边界、合同和长期决策的项目文档。 |
-| Fork | 从已有 Thread 的某个历史节点创建独立的新 Thread，源历史不变。 |
-| Merge | pide 将多个 Thread 或 Thread Branch 的有效内容整理成一个新 Thread 的操作，不是改写或拼接原始历史。 |
+| Fork | 从已有 Thread 的某个历史节点创建关联的新 Thread，记录父子关系且源历史不变。 |
+| Merge | pide 将多个 Thread 的有效上下文通过公共前缀继承或 handoff 整理成一个新 Thread 的操作，不改写原始历史。 |
 
 ## 5. 功能范围总览
 
 | 模块 | 主要能力 |
 | --- | --- |
 | Projects & Workspaces | Git worktree 隔离、外部工作区、临时聊天、并行任务、Settled 生命周期 |
-| Agent Threads | 多会话、多模型、流式消息、steer/follow-up/interrupt、队列编辑、恢复、compact、统计 |
-| Code Comments | 文件/diff 行级评论、草稿批次、单条/批量发送、重新定位、处理闭环 |
-| Thread Fork & Merge | 从当前或指定历史分叉、独立子代理、跨 thread 合并新上下文 |
+| Agent Threads | 主区域双 Buffer 会话、多模型、流式消息、steer/follow-up/interrupt、队列撤回、恢复、compact |
+| Code Comments | 文件/diff 行级评论、勾选子集分批投递、重定位、常驻回复展示、一键跳转所属 Thread |
+| Thread Fork & Merge | 显式 Fork、拆分 skill 派生子 Thread、公共前缀与 handoff 合并 |
 | Spec Graph | 创建、搜索、导航、验证和持续维护项目长期知识 |
-| Shared Plans | 共享 TODO、阻塞关系、步骤状态、验证摘要、分步提交 |
-| Changes & Review | Git diff、逐行评论、独立 reviewer、修复循环、审查记录 |
-| Subagents & Resources | 前台/后台子代理、并行 fan-out、后台命令、结果投递 |
-| Artifacts | 持久产物、与 thread 关联、浏览、恢复和引用 |
+| Shared Plans | Thread 内嵌共享计划、步骤状态、验证摘要、分步提交 |
+| Changes & Review | 双侧/单栏 Git diff、逐行评论、独立 reviewer、修复循环 |
+| Subagents & Background | 关联子 Threads、并行 fan-out、后台命令状态记录与结果投递 |
+| Artifacts | 持久产物、与 thread 关联、浏览和引用 |
 | PR & Delivery | PR body、push/create/sync、checks、review、merge-ready |
-| Skills | 精简的核心工作流，以及已有 skills 的导入和管理 |
-| Pi Extensions & MCP | 安装已有扩展、启停、通用交互、MCP 配置与授权 |
-| Workbench | Neovim 原生多窗口、代码/diff/chat/comments 协同 |
-| Platform | Providers、自定义模型服务、远程使用、语音、语言、主题和字体 |
+| Skills & Extensions | 精简核心 skills，直接复用用户已有 Pi packages、extensions、MCP 与认证 |
+| Workbench | Neovim 0.12+ 原生 TUI 窗口、代码/diff/thread/comments 协同与远程透明运行 |
 
 ---
 
@@ -133,7 +130,8 @@ pide 让用户不离开 Neovim，就能完成从理解项目、讨论方案、�
 - 展示 branch、base、ahead/behind、未提交变更、PR、CI 和活跃任务状态。
 - 支持 Agent 请求“在 side workspace 中执行”，由用户授权后创建并启动新 thread。
 - 支持从 scratch chat 继续到正式 workspace：先形成 handoff summary，再创建新 thread，保留来源链接。
-- 每个 workspace 有独立 artifacts、plans、reviews、resources 和 thread 列表。
+- 支持从已有 thread（包括 merge 产生的 thread）创建 Managed workspace：携带 handoff 摘要与来源链接、当前 plan/task-spec、相关 comments、未解决冲突、假设和完成条件；新 worktree 中创建执行 thread，原 thread 作为设计来源保持不变。
+- 每个 workspace 有独立 artifacts、plans、comments 和 thread 列表。
 
 ### 6.4 Settled 生命周期
 
@@ -148,8 +146,8 @@ pide 让用户不离开 Neovim，就能完成从理解项目、讨论方案、�
 ### 7.1 多会话
 
 - 每个 Workspace 可同时存在多个独立 threads。
-- 每个 thread 可拥有独立模型、thinking level、工作目录、plan 和 resources。
-- 支持主线程、普通独立线程、review thread、subagent thread 和合并产生的 thread。
+- 每个 thread 可拥有独立模型、thinking level、工作目录、plan 和后台命令记录。
+- 支持普通独立线程、Fork 线程、拆分 skill 派生的子代理线程和合并产生的 thread（统一使用同一 Thread 模型）。
 - 支持活跃、等待输入、排队、后台工作、完成未读、失败、已中断等状态。
 
 ### 7.2 对话与运行控制
@@ -163,7 +161,7 @@ pide 让用户不离开 Neovim，就能完成从理解项目、讨论方案、�
   - **Clear queue / Remove / Edit queued item**：清空队列、删除单条，或将单条排队消息连同附件与引用撤回草稿编辑，并支持在 Steer 与 Follow-up 间改道。
 - 用户主动执行 Stop 或手动 Compact 前，默认排空未消费的用户排队消息并回填至输入草稿，防止停止后意外继续执行或丢失输入。
 - Thread 处于等待交互回答（如弹窗提问或确认）状态时，直接发送新的 Steer 或 Follow-up 会自动取消挂起的旧交互并继续推进。
-- 支持图片、文件引用、buffer、selection、diagnostics、comment 和 git diff 上下文；在代码区选中内容或单条 comment 时，可直接免切窗向运行中的 thread 发送 Steer 或 Follow-up，不抢走编辑器焦点。
+- 支持图片、文件引用、buffer、selection、diagnostics、comment 和 git diff 上下文；在代码区选中内容时可通过 `<Space>as` / `<Space>aS` 免切窗快速提问（默认发往当前活跃 Thread，运行中默认 Follow-up，显式 `S` 才走 Steer），不抢走编辑器焦点。
 - 支持 skill 和 prompt template 调用与补全。
 - 支持手动 compact、自动 compact 状态、token/cost/context usage 展示。
 - 支持切换模型与 thinking level，并明确当前 thread 实际使用的模型。
@@ -182,21 +180,11 @@ pide 让用户不离开 Neovim，就能完成从理解项目、讨论方案、�
 
 ### 8.1 创建 Comment
 
-用户可以在以下内容上创建 comment：
+用户可以在以下内容上创建行级或选区 comment：
 
-- 普通文件的一行或连续行；
-- 当前 buffer 的 visual selection；
-- 未提交 diff 的新旧两侧；
-- branch/commit diff；
-- Spec、task-spec、plan、artifact 和 PR body；
-- 支持的文档结构节点或图像区域（后续增强，不作为首版阻塞）。
-
-Comment 类型：
-
-- **Line**：精确行范围。
-- **File**：整个文件。
-- **Diff hunk**：某个变更块。
-- **General**：不绑定具体文件的整体意见。
+- 普通文件的一行或连续行（visual selection）；
+- 未提交 diff 或指定 branch/commit diff 的新旧两侧（`Base` / `Modified`）；
+- 在主工作区打开的 Spec、task-spec、artifact 或 PR body 文本。
 
 创建 comment 不修改源文件内容，不插入 `//`、`#` 等真实代码注释。
 
@@ -205,30 +193,26 @@ Comment 类型：
 每条 comment 保存：
 
 - 唯一 ID；
-- 正文和可选标题；
+- 正文；
 - 文件路径及所在 workspace；
-- 来源类型和 diff side；
+- diff side（`base` / `modified`）与固定 `base_ref`；
 - 创建时的行范围、代码片段及必要上下文；
 - 内容 hash 和可重新定位的 text quote；
-- 当前状态：`draft`、`sent`、`resolved`、`dismissed`；
+- 当前状态：`draft`、`sent`、`dismissed`（不再设置独立的 `resolved` / `reopen` 状态机，避免与 Thread 会话形成双轨维护）；
 - 锚点状态：`anchored`、`moved`、`outdated`；
-- 发送目标 thread 和发送时间；
-- 后续处理记录与 Agent 回复链接。
+- 发送目标 thread、发送时间与最新回复摘要；
+- 关联的 Thread 消息引用（Thread 为评论回复与后续讨论的唯一事实来源）。
 
-### 8.3 草稿与批量管理
+### 8.3 草稿与分批投递管理
 
-- 默认创建为 `draft`，不立即打断 Agent。
-- 底部 Comment Shelf 集中展示当前 workspace 的全部草稿。
-- 支持编辑、删除、排序、按文件分组、按状态过滤和批量选择。
-- 支持跨文件、跨 diff、跨 thread 暂存，但发送时必须明确目标。
-- 支持以下发送方式：
-  1. 立即发送当前 comment；
-  2. 将当前 comment 加入批次；
-  3. 发送整个批次；
-  4. 只发送批次中的选中项。
-- 可发送到当前 thread、新 thread、指定历史 thread 或新的子代理。
-- 普通文件与 diff 的单条、批量评论均可从当前 thread 最新状态分叉为独立子代理任务并行执行，完成后按第 9.4 节选择有效结论合并成新的实施 thread（源 thread 不变，不等同于自动合并 Git 代码）。
-- 发送到正在运行的 thread 时默认走 Follow-up 排队，紧急纠偏可显式选 Steer；排队中的评论在消费前被撤回时自动退回 `draft`。
+- 在普通文件或 Diff 中按 `<Space>ac` 直接打开轻量浮窗：当前行无草稿时新建，已有草稿时直接载入编辑；不提供单条评论的“发给当前 Thread”或常驻“编辑”按钮。
+- 默认创建为 `draft`，不立即打断 Agent；代码行保留下划线与行号标记，并在代码行下方通过只读 `virt_lines` 常驻直接展示评论正文与回复。
+- 右侧评论列表（宽屏）与底部评论架（窄屏或用户显式打开）集中、完整展示当前 workspace 的评论原文与回复，不截断省略。
+- 支持跨文件、跨 diff 暂存草稿，并支持**勾选任意子集分批投递**：例如先勾选一批草稿发往已有 Thread A，再勾选另一批发往已有 Thread B，剩余草稿发往新建独立 Thread。
+- 默认发送目标是当前活跃 Thread，可显式切换为其他已有 Thread 或新建独立 Thread；向非活跃 Thread 投递评论不会自动切换当前活跃 Thread，也不会抢走代码区焦点。
+- 评论列表头部清晰展示当前发送目标与已勾选条数，未勾选草稿（`N = 0`）时禁止发送。
+- 发送意味着立即把真实 prompt 交给目标 Thread 或其专属队列，不是填入输入框等待。目标 Thread 空闲时立即执行；运行中默认进入该目标自己的 Follow-up 队列，仅显式触发（`S`）才进入 Steer。
+- 已发送评论的撤回入口统一位于目标 Thread / Queue（按 `r`），不在代码行内重复提供。只有显式撤回尚未消费的排队项（或执行 Stop / Compact / Interrupt 排空）时，才统一回滚文字、引用并将关联未消费评论退回 `draft`；系统队列 `queue.system` 独立保留。
 
 ### 8.4 发送上下文
 
@@ -247,19 +231,18 @@ Comment 类型：
 
 ### 8.5 重新定位与过期
 
+- 评论身份由 ID、创建时快照、内容 hash 和 text quote 保持；行号是可更新的位置，不是评论身份本身。
 - 文件未变化时保持 `anchored`。
-- 文件变化后，如果原文可唯一定位，更新行号并标记 `moved`。
-- 原文不存在、匹配不唯一或文件删除时标记 `outdated`，仍保留创建时快照。
+- 文件变化后，结合 `vim.text.diff` 与唯一文本匹配重新定位：如果原文可唯一定位，更新行号并标记 `moved`。
+- 原文不存在、匹配不唯一或文件删除时标记 `outdated`，仍保留创建时快照供核对。
 - base diff 使用固定 commit，不随后续代码移动。
 - 发送前重新计算定位，避免把错误行号发给 Agent。
 
-### 8.6 处理闭环
+### 8.6 处理与后续沟通闭环
 
-- Agent 的回复和修改可与 comment 关联查看。
-- 用户可以逐条标记 resolved/dismissed，也可以要求继续修改。
-- Agent 可以提出解决建议，用户确认后关闭；已有 Pi extension 提供标准解决工具时，也可由 Agent 直接完成相同流程。
-- 重开一个已解决 comment 会保留历史，不创建重复评论。
-- 批量发送后，可从 Comment Shelf 查看哪些已回复、哪些仍需处理。
+- Agent 的回复摘要会直接回写并在代码行下方的只读 `virt_lines` 以及右侧评论列表中常驻完整显示，无需移动光标才展开。
+- 已发送评论不设单独的“继续修改（followup）”输入框或“解决（resolve）”按钮：**所有后续追问与讨论统一回到所属 Thread 主视图进行**（在评论列表按 `v`、点击“查看 Thread”，或在代码行按 `<Space>av` 直接打开目标 Thread）。
+- 阅读完毕或不再需要保留锚点提示的评论（无论草稿还是已发送），均可在评论列表按 `d` 清理（`dismissed`），从代码下划线和列表中移除，不影响目标 Thread 的持久聊天记录。
 
 ## 9. Thread 分叉、子代理与合并
 
@@ -322,9 +305,9 @@ Merge 的语义是：**创建一个新的工作 thread，并将多个来源的�
 
 Merge 方式：
 
-1. **Handoff Merge（默认）**：生成结构化合并摘要，包括共同目标、各来源结论、决策、证据、未解决项、冲突和 artifacts 链接。
-2. **Selected Context Merge**：用户选择具体消息或条目加入新 thread，适合只需要少量原文的情况。
-3. **Comparison First**：先展示各来源差异和冲突，由用户或 Agent 形成合并结论后再开始新 thread。
+1. **Common-prefix Merge（有真实公共祖先时优先）**：对于通过显式 Fork 或拆分 skill 派生、共享真实 `parent_id` / `fork_entry_id` 谱系的 Threads，先定位最深公共祖先，**公共前缀只继承或引用一次**，仅比较和合并分叉点之后的后缀结论、证据与冲突。
+2. **Handoff Merge（无公共祖先时默认）**：对于完全独立的 Threads（或跨后端无谱系会话），生成结构化合并摘要，包括共同目标、各来源结论、决策、证据、未解决项、冲突和 artifacts 链接，**绝不伪造共享历史前缀**。
+3. **Selected Context / Comparison First**：支持先对比各来源差异与冲突，或按需挑选关键条目组织进新 Thread。
 
 Merge 不采用简单时间顺序拼接全部消息，因为这样会重复上下文、混淆角色并丢失真正的决策关系。
 
@@ -414,23 +397,20 @@ Merge 后仍可对任意来源再次 fork，形成可追踪的工作图。
 
 ### 12.2 Review 方式
 
-- 用户逐行评论，可单条或批量发送，并可分叉任务并行处理、完成后汇总结论，使用第 8 节的统一 Comment 流程。
-- 支持独立 reviewer 子代理进行冷审查。
-- Review 至少区分两条轴：
+- 用户在代码或双侧 Diff 上逐行留草稿评论，按第 8 节统一流程勾选不同子集分批投递给目标 Thread 或新建 Thread；也可通过 Fork / 拆分 skill 派生子 Thread 并行排查，完成后汇总结论。
+- Review 直接复用代码行下方的常驻 `virt_lines` 与右侧评论列表展示原文和 Agent 回复，所有追问与讨论统一跳转到所属 Thread 进行，不单独拆出与 Thread 脱节的审查页。
+- 支持独立 reviewer 子代理从两条轴进行冷审查：
   - **Standards**：仓库规范、架构和代码质量；
   - **Spec**：是否满足原始要求、是否遗漏或扩大范围。
-- 高风险改动可增加多模型 adversarial review。
 - 只有能由代码、运行或明确规范支持的 finding 才进入正式问题列表。
 
 ### 12.3 修复循环
 
-- review findings 与计划步骤返工请求可发送到新子代理，或固定以 Follow-up 排队发回原实现 thread（不以 Steer 打断正在执行的工具调用；消费前取消或发送失败时同步回滚对应发送状态）。
-- 修复后重新检查相关 finding 和 blast radius。
-- 支持一次自动修复与复审，之后由人决定，避免无限循环。
-- 记录 reviewed、changes requested、reviewedShas 和后续新 delta。
-- 只审查新增修订，不要求每次重看全部历史变更。
+- review findings 与计划步骤返工请求可发送到新子 Thread，或以 Follow-up 排队发回原实现 Thread（不以 Steer 打断正在执行的工具调用；消费前撤回或发送失败时统一回滚对应状态）。
+- 排队项的撤回只在目标 Thread / Queue 进行（按 `r`），不在代码行内提供第二入口。
+- 修复后重新检查相关 finding 和 blast radius；只审查新增修订，不要求每次重看全部历史变更。
 
-## 13. Background Commands 与 Resources
+## 13. 后台命令与子代理归属
 
 ### 13.1 后台命令
 
@@ -450,42 +430,17 @@ Merge 后仍可对任意来源再次 fork，形成可追踪的工作图。
 - 页面关闭不终止任务，宿主退出时提供明确清理策略；
 - 结果可在后续步骤反馈给 Agent。
 
-### 13.2 Resources 视图
+### 13.2 子代理与后台资源的呈现归属
 
-统一展示：
+不单独设置常驻的“任务（Resources）”侧栏页签，按真实对象语义归位：
 
-- 子代理；
-- 后台命令；
-- MCP servers 与调用；
-- 相关进程和可检查日志；
-- 已完成历史记录。
-
-用户可查看状态、输出、停止任务，并跳转到对应 thread 或 artifact。
+- **子代理（Subagents）即关联子 Threads**：由显式 Fork 或拆分 skill 创建的子代理本身就是带 `parent_id` 的 Thread，直接在主区域 Thread 选择器、左导航 Threads 和谱系树中查看与切换，拥有完整 transcript。
+- **后台命令与服务记录在发起 Thread 中**：后台命令不是聊天会话，其启动原因、运行状态、退出码和有界日志链接直接记录在发起 Thread 的消息流、`queue.system` 回传通知或底部 Shelf 终端/队列页中，支持随时查看输出和精确停止，不强行伪装成 chat session。
 
 ## 14. Artifacts
 
-### 14.1 保存与分类
-
-Artifacts 默认保存在 workspace 的 Git-ignored 区域，包括：
-
-- task specs；
-- 设计和调研文档；
-- Mermaid 和比较方案；
-- UI mockups；
-- 截图与录屏；
-- 测试和性能证据；
-- TODO/review 记录；
-- PR body 与 PR 图片；
-- 决策日志和合并摘要。
-
-### 14.2 使用方式
-
-- 支持按最新列表、目录树或 Smart 视图（突出展示 Agent 交付给用户的正式结果，并将其下的中间工作文件折叠）按 workspace、thread、类型和时间浏览。
-- 展示由哪个 thread/task 创建，并在每轮对话下直接列出该轮生成的 artifacts。
-- 可在对话中引用、在代码区打开、重命名、复制到项目或下载。
-- 新 artifacts 提供未读提示。
-- 即使用户或 Agent 删除了工作文件，也保留可恢复副本和删除记录。
-- 临时产物不自动进入 Git，也不应散落 `/tmp` 后失去关联。
+- Agent 在会话中产生的临时或正式交付文件（如 task-spec、调研报告、架构图、验证日志、PR body、合并摘要）默认保存在 workspace 的 Git-ignored 区域，避免散落 `/tmp` 或污染 Git 工作树。
+- 左导航 `Artifacts` 支持按当前 workspace 查看交付物并在主代码区直接打开、引用或留 comment；临时产物不自动纳入提交。
 
 ## 15. PR 与交付
 
@@ -528,20 +483,20 @@ Artifacts 默认保存在 workspace 的 Git-ignored 区域，包括：
 
 ### 16.2 精简后的核心 Skills：12 个
 
-| 核心 Skill | 用途 | 主要融合来源 |
-| --- | --- | --- |
-| `choosing-a-workflow` | 根据任务进入 onboarding、设计、调试、执行、审查、交付或直接回答，避免所有请求都走重流程。 | ThinkRail `choosing-a-workflow`；Matt `ask-matt`；pstack `poteto-mode/poteto-help/sharpen` |
-| `onboarding-a-project` | 空项目形成目标文档，已有代码生成 Spec 图谱，已有 Spec 则审查和补齐。 | ThinkRail `setting-up-a-project/starting-a-new-project/importing-a-codebase`；Matt `setup-matt-pocock-skills`；pstack `setup-pstack` |
-| `designing-a-change` | 通过多轮访谈明确产品和技术决策，必要时用原型比较方案，并写入 task-spec、Glossary 或 ADR。 | ThinkRail `brainstorming/asking-user-questions/writing-specs`；Matt `grill-with-docs/grilling/domain-modeling/codebase-design/prototype/to-spec`；pstack `architect/arena` |
-| `diagnosing-bugs` | 建立可复现反馈回路，最小化、假设、instrument、修复和回归验证；覆盖性能和 trace 分支。 | ThinkRail `brainstorming`（`fixing-a-bug` 分支）；Matt `diagnosing-bugs`；pstack `bug-fix/perf-issue/runtime-forensics/trace-forensics/principle-attack-the-premise` |
-| `executing-with-todos` | 将工作拆成可验证任务图，维护共享计划、证据和分步提交。 | ThinkRail `todos`；Matt `implement/to-tickets/tdd`；pstack `feature/refactoring/principle-sequence-verifiable-units/show-me-your-work` |
-| `verifying-behavior` | 建立并维护项目验证路径，检查真实行为、性能数字和必要的形式化属性。 | pstack `create-verification-skill/create-formal-verification-skill/statechart/benchmark-checklist`；Matt `tdd`；ThinkRail 验证纪律 |
-| `reviewing-changes` | 从 Standards 与 Spec 两轴审查，支持逐行评论、对抗审查和修复复审。 | ThinkRail review 工具与闭环；Matt `code-review`；pstack `interrogate/blast-radius/no-comments` |
-| `shipping-a-pr` | 完成最终验证、生成 PR、同步、处理 CI/review 并交付。 | ThinkRail `shipping-a-pr`；Matt `pr`；pstack `opening-a-pr/babysit/shipping` |
-| `researching-and-explaining` | 基于代码、历史、文档和 primary sources 调研，并形成引用明确的解释或 handoff。 | ThinkRail `librarian`；Matt `research/teach/handoff`；pstack `how/why/recall/teach/ketchup` |
-| `coordinating-agents` | 管理子代理、并行切片、方案竞赛、后台结果和长期任务决策日志。 | ThinkRail `pi-subagents/pi-background-commands`；Matt `implement-spec/chief-of-staff`；pstack `swarm/figure-it-out/autopilot-*/worker.md` |
-| `maintaining-project-knowledge` | 维护 Spec 图谱、统一术语、ADR 和跨 compact 的关键上下文。 | ThinkRail `spec-graph/writing-specs`；Matt `domain-modeling`；pstack `principle-model-the-domain` |
-| `improving-agent-environment` | 将会话经验变成架构、类型、lint、CI、测试或更准确的 skill，而不是堆积提示词。 | Matt `retro/improve-codebase-architecture`；pstack `correct/reflect/automate-me` |
+| 核心 Skill | 用途 |
+| --- | --- |
+| `choosing-a-workflow` | 根据任务进入 onboarding、设计、调试、执行、审查、交付或直接回答，避免所有请求都走重流程。 |
+| `onboarding-a-project` | 空项目形成目标文档，已有代码生成 Spec 图谱，已有 Spec 则审查和补齐。 |
+| `designing-a-change` | 通过多轮访谈明确产品和技术决策，必要时用原型比较方案，并写入 task-spec、Glossary 或 ADR。 |
+| `diagnosing-bugs` | 建立可复现反馈回路，最小化、假设、instrument、修复和回归验证；覆盖性能和 trace 分支。 |
+| `executing-with-todos` | 将工作拆成可验证任务图，维护共享计划、证据和分步提交。 |
+| `verifying-behavior` | 建立并维护项目验证路径，检查真实行为、性能数字和必要的形式化属性。 |
+| `reviewing-changes` | 从 Standards 与 Spec 两轴审查，支持逐行评论、对抗审查和修复复审。 |
+| `shipping-a-pr` | 完成最终验证、生成 PR、同步、处理 CI/review 并交付。 |
+| `researching-and-explaining` | 基于代码、历史、文档和 primary sources 调研，并形成引用明确的解释或 handoff。 |
+| `coordinating-agents` | 管理子代理、并行切片、方案竞赛、后台结果和长期任务决策日志。 |
+| `maintaining-project-knowledge` | 维护 Spec 图谱、统一术语、ADR 和跨 compact 的关键上下文。 |
+| `improving-agent-environment` | 将会话经验变成架构、类型、lint、CI、测试或更准确的 skill，而不是堆积提示词。 |
 
 ### 16.3 不单独新增的内容
 
@@ -556,260 +511,173 @@ Artifacts 默认保存在 workspace 的 Git-ignored 区域，包括：
 
 ## 17. Pi Extensions、Packages 与 MCP
 
-### 17.1 已有 Pi Extensions
+### 17.1 复用已有 Pi 生态（不重复造包管理器）
 
-pide 不要求开发自己的 Pi extension API 或 host SDK，而是复用已有 Pi 扩展。
+- pide 直接复用用户通过 Pi CLI 已安装和配置的 packages、extensions、skills、prompt templates 和 tools，**不在 Neovim 内重复实现一套 npm/Git 包管理与商店 UI**。
+- 在当前 Thread 中展示已加载的 tools / skills 状态与加载错误，支持调用已有能力（如结构化提问、网页调研、子代理与自定义工具）。
 
-支持：
+### 17.2 通用 Extension UI 承载
 
-- 从 npm、Git 或本地路径安装 package；
-- 用户级和项目级安装；
-- 查看 package 提供的 extensions、skills、prompt templates 和 tools；
-- 按 package 或具体资源启停；
-- 更新、移除和重新加载；
-- 展示加载错误和来源；
-- 与当前 thread 的 tools 状态同步。
+pide 为 Pi 扩展提供 Neovim 原生通用交互映射：
 
-可直接使用例如：
+- `select`、`confirm`、`input` → `minimal` 浮窗选择或单行输入；
+- `editor` → 可编辑 scratch buffer；
+- `notify`、`status` → 状态栏与非侵入消息提示；
+- 工具执行的 `start / update / end` 流式输出与文件行号跳转链接直接在 Thread Markdown buffer 中呈现。
 
-- `ask-user-question`：结构化提问、键盘作答与多方案并排对比预览；
-- `visualize`：图表、比较、文件预览，以及可在外部浏览器以无网络沙箱打开的可交互 HTML 原型；
-- `web-access`：网页、仓库、PDF 等研究；
-- `subagents`、background commands、spec/todo 等已有兼容实现。
-
-### 17.2 通用 Extension UI
-
-pide 为已有扩展提供通用交互承载：
-
-- select、confirm、input、editor；
-- notify、status、widget；
-- 通用 tool start/update/end 展示；
-- 通用文本、代码、diff、图片和文件链接结果。
-
-只支持宿主通用协议，不要求为 pide 编写专用 renderer。高度依赖原 Agent TUI 的扩展在无法完整呈现时明确降级，不假装兼容。
+只承载宿主通用协议，不要求扩展为 pide 编写专用 renderer；高度依赖独立终端画布的扩展明确提示降级。
 
 ### 17.3 MCP
 
-- 读取 Pi 的用户级和项目级 MCP 配置。
-- 添加、修改、删除、启停和重连 server。
-- 项目配置只有在信任并单独批准后启用。
-- 非 read-only 调用默认请求确认，可对可信工具按项目授权。
-- 支持 OAuth 登录、状态和日志查看。
-- 在 Resources 中显示每个 thread 的 server 状态和调用记录。
+- 直接读取并遵循 Pi 的用户级和项目级 MCP 配置；项目级配置需明确信任后启用，非只读调用遵循确认策略，调用记录体现在所属 Thread 的工具输出中。
 
-## 18. Providers、Skills 与平台能力
+## 18. 模型、外观与运行环境
 
 ### 18.1 Providers 与模型
 
-- 使用用户已有 Pi 认证，不建立 pide 账号体系。
-- 支持 Pi 已支持的 provider、API key 和 OAuth。
-- 支持 OpenAI-compatible 自定义网关及本地模型服务。
-- 可检测模型列表、能力、上下文窗口和输入类型。
-- 配置写回 Pi 的共享配置，Neovim 与 Pi CLI 保持一致。
-- 明确提示不可用模型、缺失认证和上下文限制。
+- 直接复用用户已有 Pi 认证与模型配置（provider、API key、OAuth、自定义网关），不在 pide 中另建账号或密钥管理体系。
+- 支持在 Thread 中切换可用模型与 thinking level，配置与 Pi CLI 保持一致，并清晰提示缺失认证或上下文限制。
 
-### 18.2 输入与输出
+### 18.2 输入与上下文
 
-- Prompt 支持文本、图片、文件、selection、diagnostics、comments 和 artifacts。
-- 支持本地语音输入，语音内容只进入编辑草稿，不自动发送。
-- 支持 prompt template、skill 和历史消息搜索。
-- Agent 输出不强行翻译；界面语言可独立选择。
+- Prompt 支持文本、文件引用、visual selection、diagnostics、comments、diff 和 artifacts；支持 `/skill:name` 与 prompt template 调用补全。
 
-### 18.3 外观与无障碍
+### 18.3 外观与键盘可访问性
 
-- 默认遵循 Neovim colorscheme 和字体，不建立第二套相互冲突的主题系统。
-- 支持针对 Agent 面板配置强调色、边框、状态和可访问的对比度。
-- 代码字体、UI 字体、字号和 ligature 遵循用户编辑器配置。
-- 所有功能（含对话浏览、行级评论和提问作答）均可通过键盘完成；提供统一快捷键表与速查视图，支持用户重绑定、扩展自带按键及配置导入导出，并支持列表快速过滤与跳转提示（hint mode）。
-- 界面文案支持英语及后续语言包；缺翻译时回退英语。
+- 完全继承用户当前 Neovim colorscheme、字体与 `'winborder'`，不建立第二套冲突的主题/字体配置系统；仅提供语义化的 `Pide*` highlight groups（默认链接到标准高亮组）供按需覆盖。
+- 所有功能（会话阅读、多行输入、行级评论、分批投递、提问作答、Fork/Merge）100% 可通过键盘完成，状态同时通过文字与符号表达，不只依赖颜色。
 
 ### 18.4 本地与远程
 
-- 本地 Neovim 提供完整功能。
-- SSH/headless/远程 Neovim 下保持同一 thread 和 workspace 语义。
-- Tailscale 只作为网络与设备访问边界，pide 不额外实现账号系统。
-- 远程文件、终端、命令和 Agent 工作目录必须明确属于哪台主机，避免本机/远端混淆。
+- 本地 Neovim 与 SSH / Tailscale 远程 Neovim 下保持完全一致的纯文本 TUI、Thread 和 Workspace 语义；远程工作目录在状态栏清晰标明，避免本机/远端混淆。
 
-## 19. Neovim 界面与窗口设计
+## 19. Neovim 0.12+ 界面与交互设计
 
-### 19.1 设计目标
+> 完整可交互视觉与按键原型见 [`doc/ui.html`](./ui.html)。
 
-- 默认保持代码区足够大，不一次性展示所有面板。
-- 采用渐进披露：只有当前任务需要的面板出现。
-- 每种内容有固定归属，避免同一个面板在多个窗口反复打开。
-- 隐藏面板只隐藏 UI，不停止 thread、子代理或后台命令。
-- 切换 workspace 不应破坏用户自己的其他 tabpage 和窗口布局。
+### 19.1 设计目标与原生 TUI 边界
 
-### 19.2 默认工作布局
+- **纯正 Neovim 0.12+ 原生 TUI**：所有界面完全由普通窗口、真实命名 buffer、单行 `winbar`（含 `%@` 可点击文本段）、`nvim_buf_set_extmark`（行号标记 + 下划线 + 只读 `virt_lines`）和轻量 `minimal` 浮窗构成，**绝不假设存在 Web/HTML 按钮控件**。
+- **键位边界绝对干净**：在可编辑代码与 Diff buffer 中，pide 仅注册 `<leader>a…`（如 `<Space>ac`、`<Space>ai`）前缀键，绝不覆盖 `c/C`、`r`、`gd`、`gt`、`gq` 等原生 Vim 操作符，也不篡改原生窗口跳转 `<C-w>h/j/k/l`；单字符短键（`j/k`、`Space`、`s`、`t`、`v`、`d`、`q`）仅在 pide 只读插件 buffer 与浮窗内局部生效。
+- **主区域承载重阅读，侧栏保持单一轻量**：长对话、代码块、Plan 与多行输入放在宽敞的主区域 Thread 视图；右侧栏只承载“评论列表”，不再把聊天和任务塞进狭窄侧边栏。
+- **隐藏面板不杀进程**：收起侧栏或切回代码只隐藏窗口，不终止后台 Thread、子代理或后台命令。
+
+### 19.2 核心工作布局
+
+**模式 A：日常代码阅读与行级评论（默认）**
 
 ```text
-┌──────────────────────────────────────────────────────────────┐
-│ Workspace / Thread / Model / Status                          │
-├───────────────┬──────────────────────────────┬───────────────┤
-│ 可选导航栏     │                              │ Agent Dock    │
-│ Workspaces    │        主代码工作区           │ Chat          │
-│ Threads       │  文件 / Diff / Spec / Artifact│ Plan          │
-│ Files         │                              │ Resources     │
-├───────────────┴──────────────────────────────┴───────────────┤
-│ 可选底部 Shelf：Comments / Queue / Diagnostics / Terminal     │
-└──────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│ Tabline: 1: feat/auth · jwt.lua │ ...                  feat/auth │
+├───────────────┬──────────────────────────────┬───────────────────┤
+│ 可选左导航     │ 主工作区：代码文件 / Diff     │ 右侧：评论列表     │
+│ Workspaces    │  7  local token = ...        │ 发送到: 鉴权Thread │
+│ Threads       │     ↳ [草稿] 是否兼容小写？   │ 已勾选 2 条  发送  │
+│ Specs         │ 12  if claims.exp < ...      │ [x] 草稿 Mod:L7   │
+│ Artifacts     │     ↳ [已回复] ...            │ 已回复 Mod:L12    │
+│               │     ↳ 回复: 已加入校验...     │   ↳ 回复: ...     │
+├───────────────┴──────────────────────────────┴───────────────────┤
+│ 可选底部 Shelf：评论架（窄屏自动接管） / 排队消息 / 诊断          │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
-默认只显示“主代码工作区 + Agent Dock”，导航栏和底部 Shelf 按需打开。
+**模式 B：主区域宽版 Thread 会话（按 `<Space>ai` 打开，按 `q` 栈式返回代码）**
+
+```text
+┌──────────────────────────────────────────────────────────────────┐
+│ pide://thread/t1 │ #1 鉴权 Thread  #2 副 Thread │ +Thread Fork q │
+│ ──────────────────────────────────────────────────────────────── │
+│ ## Plan                                                          │
+│ - [x] 1. 提取 Bearer 令牌格式校验                                 │
+│ ### 你 / ### Agent（只读 Markdown transcript，支持搜索与折叠）     │
+├──────────────────────────────────────────────────────────────────┤
+│ pide://composer/t1 · claude-sonnet-4      r 撤回 · Stop · Send   │
+│ 多行可编辑输入 buffer（Enter 发送，Shift+Enter 换行，Esc 回会话）  │
+└──────────────────────────────────────────────────────────────────┘
+```
 
 ### 19.3 各区域职责
 
-#### 主代码工作区
+#### 主区域：代码 / Diff 与双 Buffer Thread 栈式切换
 
-- 始终用于文件、diff、spec、artifact 和 review。
-- Agent 打开文件时优先复用此区域已有窗口。
-- 支持 Neovim 原生 split、tab、quickfix、diff 和跳转。
-- 用户手动切走后，Agent 不自动抢回焦点。
+- 日常用于文件编辑、双侧/单栏 Diff、Spec 与 Artifact 阅读。
+- 按 `<Space>ai` 在主区域打开当前活跃 Thread（尚无 Thread 时自动新建），由两个真实 buffer 上下组合：
+  - **上方会话窗（`pide://thread/<id>`）**：只读 Markdown buffer，复用 Neovim 0.12 原生 Markdown Treesitter 高亮与折叠，内嵌展示可选 `## Plan`、消息流、文件行号引用与后台输出链接；顶栏 `winbar` 支持 `#1/#2` 或 `Tab` 切换不同 Thread，以及 `n` 新建独立 Thread、`f` Fork、`s` 调用拆分 skill、`m` 进入 Merge、`a` 并排开关右侧评论列表。
+  - **下方输入窗（`pide://composer/<id>`）**：固定高度普通可编辑 buffer，天然支持多行粘贴、编辑与补全；`winbar` 显示当前模型、未消费队列摘要及 `r` 撤回、`Stop`、发送模式。
+- 按 `q` 从 `viewStack` 精确恢复进入 Thread 前的代码/Diff buffer、光标滚动位置和侧栏开闭状态。
 
-#### Agent Dock
+#### 右侧评论列表（Comments Sidebar）
 
-- 右侧常驻或可切换，承载 Chat、Plan、Specs、Resources。
-- 这些页面共用一个 dock，通过内部 tab 切换，而不是连续开多个垂直窗口。
-- Chat 中可选择消息、工具、文件链接和 comment，并决定发送到代码区还是新面板。
-- 长输出默认折叠，当前 turn 和需要用户处理的内容优先展示。
+- 右侧栏**仅承载评论列表**（不再包含 Thread 页和任务页），为纯文本只读 buffer，开启软换行完整展示每条评论正文与 `↳ 回复：...`，不作单行截断。
+- 顶部清晰展示 `发送到：<目标 Thread 名称> ▾ (按 t 切换)` 与 `已勾选 N 条草稿 / 发送勾选草稿 (s)`（不使用晦涩缩写）。
+- 键盘闭环：`j/k` 移动并联动预览代码位置、`Space` 勾选草稿、`e` 打开小窗编辑草稿、`t` 选择发送目标（当前 Thread / 其他已有 Thread / 新建独立 Thread）、`s/S` 批量发送（Follow-up / Steer）、`Enter` 跳回对应代码侧与行号、`v` 跳转到关联 Thread、`d` 清理草稿或已读评论。
 
-#### 左侧导航栏
+#### 代码行内常驻虚拟行（`virt_lines`）
 
-- 按需显示 Workspaces、Threads、Files、Specs 或 Artifacts。
-- 同一时间只展示一种导航内容。
-- 用于切换和过滤，不承载长对话或复杂编辑。
+- 有未清理评论的代码行保留行号旁标记与代码下划线，并在该行下方通过只读 `virt_lines` **常驻直接展示评论内容、`outdated` 原文快照及 `↳ 回复：...`**，无需把光标移到该行才展开；`virt_lines` 内不包含任何按钮，编辑按 `<Space>ac`，打开关联会话按 `<Space>av`。
+- `moved` 行号偏移静默更新；仅 `outdated` 高亮提示需核对快照。
+- 真实验证信息留在 Plan 步骤或 Thread 记录中，不在状态栏放置无数据支撑的“已验证”徽章；Thread 运行态直接联动 Neovim 0.12 原生 `'busy'` 状态与进度提示。
 
-#### 底部 Shelf
+#### 左侧导航栏与底部 Shelf
 
-- Comments 是核心页面之一。
-- Queue 页面区分显示 Steer 与 Follow-up 两条队列及条数，支持键盘删除、撤回回填编辑与改道；也可显示 diagnostics、终端、后台日志和决策日志。
-- 高度可调整，默认保持较低，批量处理时再扩大。
+- **左导航（`<Space>an`）**：按需切换浏览 Workspaces、Threads、Specs、Artifacts。
+- **底部 Shelf（`<Space>al` / `<Space>aq`）**：窄屏 Diff 下自动接管评论列表（与右侧评论列表共享同一份评论状态，绝不同时双开）；Queue 页展示当前 Thread 的 Steer / Follow-up 待消费项并支持 `r` 撤回回填草稿。
 
 ### 19.4 Review 布局
 
 ```text
-┌───────────────────────┬───────────────────────┬──────────────┐
-│ Base / Original       │ Worktree / Modified   │ Review       │
-│                       │                       │ Comments     │
-│                       │                       │ Agent reply  │
-└───────────────────────┴───────────────────────┴──────────────┘
+┌───────────────────────┬───────────────────────┬──────────────────┐
+│ Base (HEAD~1)         │ Modified (Worktree)   │ 评论列表          │
+│ 可留旧侧评论与定位     │ 可留新侧评论与定位     │ 分批勾选投递 / v  │
+└───────────────────────┴───────────────────────┴──────────────────┘
 ```
 
-- 中间两栏使用 Neovim 原生 diff。
-- Review 栏展示与当前 hunk 相关的 comments 和处理状态。
-- 小屏幕时改为“diff 单栏 + 底部 comments”，避免过度压缩代码。
-- 可从 comment 跳回精确行，也可从代码行查看已有 comment。
+- 宽屏左中两栏使用 Neovim 0.12 原生 diff（默认含 `indent-heuristic` 与 `inline:char` 字符级高亮），右侧复用评论列表（严格最多三栏）。
+- 窄屏跨过断点时自动收起右侧栏，改为“单栏 Diff（顶栏及 `<Space>ab` 切换 Base ⇄ Modified）+ 底部评论架”；跨回宽屏时仅收起由窄屏自动展开的 Shelf，尊重用户手动开关状态。
+- 选中或定位 Base 评论时自动切到 Base 侧对应行，选回 Modified 评论自动切回 Modified 侧。
 
 ### 19.5 Thread Tree 与 Merge 视图
 
-- Thread Tree 使用独立临时页面，展示历史分支、节点、标签和当前 leaf。
-- 选择节点后可预览、fork、clone 或作为子代理上下文。
-- Merge 使用三步视图：
-  1. 选择来源；
-  2. 比较结论与冲突；
-  3. 确认合并内容并创建新 thread。
-- Merge 过程中不修改任何源 thread，也不在后台自动完成冲突决策。
+- Thread Tree（`<Space>at`）使用主区域只读 buffer，展示 Pi 会话历史分支、节点摘要与当前节点，支持 `f` Fork、`s` 干净上下文派发子代理、`m` 进入合并、`q` 栈式返回。
+- Merge（`<Space>am`）使用主区域三步只读视图：
+  1. 勾选来源 Threads；
+  2. 自动检测谱系：有公共祖先时明确提示“公共前缀只继承一次，仅合并分叉后缀”，无公共祖先时走 Handoff Merge；
+  3. 预览/在 scratch buffer（`e`）中修订合并摘要后回车创建新 Thread 并切入主视图。
 
-### 19.6 临时交互
+### 19.6 临时交互与窗口保护
 
-- 问题、模型选择、comment 编辑、确认和短输入使用浮窗或命令行输入。
-- 多行 comment 和合并摘要在可编辑 buffer 中完成。
-- 临时 UI 只用于当前交互，关闭后恢复原焦点与布局。
-- Agent 等待回答时，在 dock 和状态栏同时给出明显提示。
+- `<Space>ac` 行级评论输入、`<Space>as` 选区快速提问、发送目标选择、模型切换、工作区切换和 `<Space>ar` 待回答问题均使用 `style = "minimal"` 浮窗，关闭后精确归还焦点；Agent 发起提问时先在状态栏/会话条给出非侵入提示，不强弹窗打断打字。
+- 多行评论（`<Space>aC`）与合并摘要修订使用可编辑 scratch buffer。
+- 所有插件专用窗口（评论列表、底部 Shelf、左导航、Thread 上下双窗口）统一启用 Neovim 0.12 `winfixbuf = true`（配合 `winfixwidth` / `winfixheight`），防止 `:e`、`:bnext`、`:cnext` 误替换插件面板，同时严禁覆盖用户带有未保存修改 `[+]` 的编辑窗口。
 
-### 19.7 Window 管理规则
+## 20. 核心端到端工作流
 
-- 每个 tabpage 可以有独立 workspace 视图和布局。
-- 同一类 dock/shelf 在每个 tabpage 最多一个实例。
-- 同一 buffer 不无故在多个窗口重复打开；需要比较时例外。
-- 面板尺寸可以调整并记忆，但切换文件不重置用户比例。
-- 关闭面板不删除 thread；关闭 workspace 才进入生命周期检查。
-- Agent 不得在用户编辑的 split 中直接替换 buffer，所有自动跳转都遵守“代码区优先、用户焦点其次”。
-- 提供统一的打开、关闭、聚焦、放大和恢复布局命令，避免每个功能各自创建窗口。
-
-## 20. 端到端工作流
-
-### 20.1 已有项目初始化
+### 20.1 Feature 开发与分步验证
 
 ```text
-读取 Agent docs / README / manifests / 代码
-  → 判断已有 Spec、代码和文档状态
-  → 只询问代码无法表达的意图与决策
-  → 形成 goal → architecture → module specs
-  → 验证图谱
-  → 用户在代码区审查并留 comments
-  → Agent 修订后确认
+明确需求与设计（更新 Spec / 创建共享 Plan）
+  → 在隔离 Managed worktree 中按步骤实现与验证
+  → 代码区审查 Diff、留评论修正细节
+  → 生成证据明确的 PR 并交付
 ```
 
-### 20.2 Feature 开发
+### 20.2 代码评论驱动修改
 
 ```text
-用户提出目标
-  → designing-a-change 明确产品与设计
-  → 创建 task-spec 和共享 plan
-  → 创建独立 workspace
-  → 分步实现与验证
-  → 更新长期 spec
-  → Review comments / 独立 reviewer
-  → 修复与复审
-  → PR
+阅读代码或双侧 Diff
+  → 按 Space ac 在小窗新建/编辑行级评论草稿（代码行下方常驻展示 virt_lines）
+  → 在右侧评论列表勾选一批草稿发往 Thread A，另一批草稿发往 Thread B 或新建 Thread
+  → 各目标 Thread 独立执行或入队，回复直接回写显示在代码行下方与评论列表中
+  → 需要深入沟通时按 v（或 Space av）直接进入目标 Thread 主视图继续对话；看完可按 d 清理评论锚点
 ```
 
-### 20.3 Bug 修复
+### 20.3 分叉探索与多 Thread 合并
 
 ```text
-收集症状与预期
-  → 建立可重复反馈回路
-  → 最小化复现
-  → 验证根因假设
-  → 先建立回归测试或其他可执行检查
-  → 修复
-  → 原始场景与相关路径复验
-```
-
-### 20.4 代码评论驱动修改
-
-```text
-阅读代码或 diff
-  → 留下评论：单条立即发送，或积攒后从 Comment Shelf 选择一批发送
-  → 直接发送到目标 thread，或从当前 thread 分叉独立任务
-  → 多个分叉任务可并行处理，并关联各条评论的回复与结果
-  → 用户逐条确认或继续追问
-  → 可选择已完成任务的有效结论，合并成新的实施 thread
-  → 形成最终 change 和 review 记录
-```
-
-### 20.5 分叉探索
-
-```text
-主 thread 已形成若干决策
-  → 从指定历史节点 fork worker A / worker B
-  → 各自尝试不同方案
-  → 比较实现与验证证据
-  → 选中一个主路径或将优点合并到新 thread
-  → 继续实施
-```
-
-### 20.6 多 Thread 合并
-
-```text
-调查 thread + 方案 thread + 审查 thread
-  → 选择来源和有效历史范围
-  → 比较结论、决策和未解决冲突
-  → 形成 handoff merge
-  → 新 thread 继续实施
-  → 原始 threads 保持不变且可追溯
-```
-
-### 20.7 长时间自治执行
-
-```text
-明确完成条件与授权边界
-  → 共享 plan 和 decision log
-  → 主 Agent + 子代理 + 后台命令
-  → 用户离开后持续执行
-  → 中途状态、异常和待决策项可查看
-  → 最终提供证据、变更、日志和剩余风险
+当前 Thread 遇到复杂子任务或多方案取舍
+  → 按 f 显式 Fork 或按 s 调用拆分 skill 创建关联子 Threads 并行推进
+  → 按 m 选择多个来源 Threads：有公共祖先时公共前缀只继承一次并合并分叉后缀，无公共祖先时走 handoff merge
+  → 在合并产生的新 Thread 中继续实施，源 Threads 历史保持只读可追溯
 ```
 
 ## 21. Pi 与 ACP 能力模型
@@ -874,46 +742,47 @@ pide 自身提供的通用能力（代码评论、Workspace、Diff、Review、�
 
 ### 23.2 Comments
 
-- 能在普通文件和 diff 两侧创建 comment。
-- 普通文件和 diff 评论均可单条立即发送，或跨文件暂存、编辑后批量发送；两种方式均可从当前 thread 分叉独立任务并行执行，完成后可将有效结论合并成新的实施 thread。
-- Agent 收到的文件、行号、代码片段和 comment 内容准确。
-- 文件变化后 comment 能重新定位或明确标记 outdated。
-- 每条 comment 的处理状态与回复可追踪。
+- 能在普通文件和 diff 新旧两侧通过 `<Space>ac` 直接新建或编辑行级草稿评论。
+- 跨文件、跨 diff 暂存草稿后，可勾选不同子集分别批量投递给当前活跃 Thread、指定已有 Thread 或新建独立 Thread，且不改变当前活跃 Thread、不抢走代码焦点。
+- Agent 收到的文件、行号、diff side、base_ref、代码片段和 comment 内容准确。
+- 文件变化后 comment 能通过 `vim.text.diff` 与 quote/hash 重新定位，或明确标记 `outdated`。
+- 评论正文与 Agent 回复在代码行下方 `virt_lines` 和右侧评论列表中均常驻完整可见；可通过 `Enter` 跳回代码侧与行号、`v` 跳转所属 Thread 继续对话、`d` 清理评论。
 
 ### 23.3 Fork 与 Merge
 
-- 能从当前或指定 thread 历史节点创建独立子代理。
-- fork/clone 后原 thread 不变，新任务有独立 transcript。
-- 能选择多个 threads 或 Thread Branches 创建合并 thread，并查看来源和冲突。
-- Merge 不会简单拼接全部消息，也不会改写原始历史。
+- 能通过显式 Fork 或拆分 skill 从当前或指定历史节点创建关联子 Thread（记录 `parent_id` 与 `fork_entry_id`）。
+- Fork / 拆分后原 Thread 不变，子 Thread 拥有独立 transcript 与队列。
+- 能选择多个 Threads 创建合并 Thread：有真实公共祖先时公共前缀只继承一次并合并分叉后缀；无公共祖先时执行 Handoff Merge，不简单拼接全部消息，也不伪造共享历史或改写源历史。
 
 ### 23.4 Workspaces 与 Plans
 
 - 并行 Agent 默认在独立 worktree 中运行。
+- 能从已有或合并 thread 创建 Managed worktree，并携带 handoff、plan/task-spec、相关 comments 和来源链接。
 - 共享 plan 能反映步骤、阻塞、验证和提交状态。
 - 不安全的情况下不自动提交，不把其他任务或用户 WIP 混入 commit。
 
 ### 23.5 Extensions 与 Skills
 
-- 能安装并启停已有 Pi packages，使用其 tools、skills 和通用交互。
+- 能直接复用用户已安装的 Pi packages、skills 与通用交互协议。
 - 核心 skill 数量保持精简，没有为重复说法或单个 UI 操作新增大量 skills。
 - ACP backend 下不支持的能力明确降级，不影响基本聊天、comments 和 review。
 
-### 23.6 UI
+### 23.6 UI（Neovim 0.12+ 原生 TUI）
 
-- 默认布局同时保留清晰的代码区和 Agent 区。
-- 窗口可以打开、隐藏、切换和恢复，且不重复创建同类面板。
-- Review、Comment Shelf、Thread Tree 和 Merge 均有明确进入与返回路径。
-- 小窗口下仍能完成代码阅读、评论和 Agent 操作。
+- 界面全部使用 Neovim 0.12+ 原生 buffer、window、`winbar`、extmark `virt_lines` 与 `minimal` 浮窗实现，不依赖任何 HTML 按钮假设；专用窗口启用 `winfixbuf` 保护。
+- 可编辑代码/Diff buffer 仅使用 `<leader>a…` 前缀键，不覆盖任何原生 Vim 操作符或窗口跳转键。
+- `<Space>ai` 在主区域打开「上只读 Markdown transcript + 下可编辑 composer」双 Buffer Thread 视图，`q` 栈式精确恢复原代码布局；右侧栏仅承载“评论列表”，不设独立“任务”tab。
+- 宽屏右侧评论列表与窄屏底部评论架共享同一评论数据与状态，同一时刻只展示一份；评论与回复均完整展示不截断，且不设 `resolved` / 行内撤回按钮。
+- Review、评论架、Thread、Thread Tree 和 Merge 均有明确键盘进入与栈式返回路径，窄屏下仍能完整完成双侧切换、评论与会话操作。
 
 ## 24. 最终产品边界
 
-pide 的最终目标不是成为另一个 ThinkRail 前端，而是形成一个以 Neovim 为中心的 Agentic IDE：
+pide 的最终目标是形成一个以 Neovim 为中心的 Agentic IDE：
 
-- ThinkRail 提供完整的项目、工作区和开发闭环参考；
-- Matt Pocock Skills 提供访谈、任务图、TDD、诊断、双轴审查和环境改进；
-- pstack 提供 playbook 编排、并行方案探索、运行时验证、形式化验证和自治执行纪律；
-- Pi 提供 Agent、session、tools、skills 和 extensions；
+- 覆盖项目、工作区、规划、实现、验证、审查与交付的完整开发闭环；
+- 通过可组合的工作流支持需求访谈、任务图、TDD、诊断、双轴审查和环境改进；
+- 支持并行方案探索、运行时验证和有明确授权边界的自治执行；
+- 复用 Pi 的 Agent、session、tools、skills 和 extensions；
 - pide 自己重点创造的是：
   - Neovim 原生的代码与 Agent 协同；
   - 文件/diff comments 与批量处理；

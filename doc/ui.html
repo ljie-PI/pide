@@ -3,28 +3,27 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>pide.nvim — Neovim 交互规格原型（Rosé Pine Moon）</title>
+<title>pide.nvim — Neovim 交互规格原型</title>
 <style>
-  /* Authentic Rosé Pine Moon Palette (rosepinetheme.com) */
   :root {
-    --canvas: #191726;
-    --base: #232136;
-    --surface: #2a273f;
-    --overlay: #393552;
-    --hl-low: #2a283e;
-    --hl-med: #44415a;
-    --hl-high: #56526e;
-    --muted: #6e6a86;
-    --subtle: #908caa;
-    --text: #e0def4;
-    --love: #eb6f92;
-    --gold: #f6c177;
-    --rose: #ea9a97;
-    --pine: #3e8fb0;
-    --foam: #9ccfd8;
-    --iris: #c4a7e7;
-    --diff-add: rgba(156, 207, 216, 0.13);
-    --diff-del: rgba(235, 111, 146, 0.14);
+    --canvas: #ffffff;
+    --base: #ffffff;
+    --surface: #f4f5f7;
+    --overlay: #e8ebef;
+    --hl-low: #f0f1f4;
+    --hl-med: #d9dde3;
+    --hl-high: #b8c0cc;
+    --muted: #7a8391;
+    --subtle: #5f6b7a;
+    --text: #262a33;
+    --love: #c34264;
+    --gold: #9a6700;
+    --rose: #a8545b;
+    --pine: #2e6f8e;
+    --foam: #247a8a;
+    --iris: #6f56a5;
+    --diff-add: rgba(36, 122, 138, 0.10);
+    --diff-del: rgba(195, 66, 100, 0.10);
     --mono: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
     --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
   }
@@ -148,7 +147,7 @@
   }
   .loop-steps { color: var(--subtle); font-size: 11.5px; }
 
-  /* Main Area + Collapsible Debug Drawer */
+  /* Main terminal area */
   .work-area {
     display: flex;
     gap: 12px;
@@ -161,44 +160,52 @@
     flex-direction: column;
     align-items: center;
   }
-  .debug-drawer {
-    width: 340px;
-    flex-shrink: 0;
-    background: var(--base);
-    border: 1px solid var(--hl-med);
-    border-radius: 9px;
-    padding: 12px;
+
+  /* Rosé Pine Moon is scoped to the terminal, never to the surrounding page. */
+  .nvim-tui {
+    --canvas: #191726;
+    --base: #232136;
+    --surface: #2a273f;
+    --overlay: #393552;
+    --hl-low: #2a283e;
+    --hl-med: #44415a;
+    --hl-high: #56526e;
+    --muted: #6e6a86;
+    --subtle: #908caa;
+    --text: #e0def4;
+    --love: #eb6f92;
+    --gold: #f6c177;
+    --rose: #ea9a97;
+    --pine: #3e8fb0;
+    --foam: #9ccfd8;
+    --iris: #c4a7e7;
+    --diff-add: rgba(156, 207, 216, 0.13);
+    --diff-del: rgba(235, 111, 146, 0.14);
+    width: 100%;
+    aspect-ratio: 4 / 3;
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    font-size: 12px;
-  }
-  @media (max-width: 1160px) {
-    .work-area { flex-direction: column; }
-    .debug-drawer { width: 100%; }
-  }
-
-  /* ==================== ROSÉ PINE MOON NEOVIM TUI ==================== */
-  .nvim-tui {
-    width: 100%;
     background: var(--base);
+    color: var(--text);
     border: 1px solid var(--hl-med);
     border-radius: 8px;
     overflow: hidden;
     font-family: var(--mono);
     font-size: 12.5px;
     position: relative;
-    box-shadow: 0 18px 42px rgba(10, 9, 18, 0.55);
+    box-shadow: 0 14px 34px rgba(25, 23, 38, 0.18);
     transition: max-width 0.18s ease;
   }
+  .nvim-tui * { font-family: var(--mono) !important; }
 
   .tui-tabline {
     display: flex;
+    flex-shrink: 0;
     align-items: center;
     justify-content: space-between;
     background: #1d1b2d;
     border-bottom: 1px solid var(--hl-med);
-    font-size: 11.5px;
+    font-size: 12px;
     user-select: none;
   }
   .tui-tabs { display: flex; overflow-x: auto; }
@@ -229,8 +236,8 @@
 
   .tui-middle {
     display: flex;
-    height: 476px;
-    min-height: 420px;
+    flex: 1 1 auto;
+    min-height: 0;
   }
 
   .tui-win {
@@ -238,6 +245,7 @@
     flex-direction: column;
     border-right: 1px solid var(--hl-med);
     min-width: 0;
+    min-height: 0;
     background: var(--base);
   }
   .tui-win:last-child { border-right: none; }
@@ -252,16 +260,22 @@
     align-items: center;
     justify-content: space-between;
     gap: 8px;
-    padding: 4px 10px;
+    height: 24px;
+    padding: 0 10px;
     background: var(--surface);
     border-bottom: 1px solid var(--hl-med);
     color: var(--subtle);
-    font-size: 11.5px;
+    font-size: inherit;
+    white-space: nowrap;
+    overflow: hidden;
     user-select: none;
     flex-shrink: 0;
   }
+  .tui-winbar > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tui-winbar > span:last-child { flex-shrink: 0; white-space: nowrap; }
   .tui-win-body {
     flex: 1;
+    min-height: 0;
     overflow-y: auto;
     padding: 6px 0;
   }
@@ -284,6 +298,13 @@
   .cline.cursor { background: var(--hl-low); }
   .cline.focused-cursor { background: rgba(68, 65, 90, 0.55); }
   .cline.visual { background: rgba(196, 167, 231, 0.22); }
+  .cline.has-comment .code-text {
+    text-decoration: underline;
+    text-decoration-color: var(--iris);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+  }
+  .cline.has-comment.outdated-anchor .code-text { text-decoration-color: var(--gold); }
   .cline.diff-add { background: var(--diff-add); }
   .cline.diff-del { background: var(--diff-del); }
   .csign { text-align: center; font-size: 11px; user-select: none; }
@@ -297,28 +318,61 @@
   }
   .virt-eol.warn { color: var(--gold); }
 
-  /* Inline Current-Line Comment Card */
-  .inline-card {
-    margin: 3px 14px 6px 52px;
-    padding: 6px 10px;
-    border-radius: 5px;
-    background: var(--surface);
-    border-left: 2.5px solid var(--iris);
-    font-family: var(--sans);
-    font-size: 12px;
+  /* Native Neovim TUI text segments & virt_lines (zero HTML button chrome inside .nvim-tui) */
+  .wb-seg {
+    cursor: pointer;
+    color: var(--subtle);
+    padding: 1px 5px;
+    border-radius: 2px;
+  }
+  .wb-seg:hover { color: var(--text); background: var(--hl-low); }
+  .wb-seg.active { color: var(--base); background: var(--rose); font-weight: 700; }
+  .wb-seg.accent { color: var(--foam); }
+  .wb-seg.warn { color: var(--gold); }
+  .wb-seg.danger { color: var(--love); }
+  .wb-sep { color: var(--hl-high); margin: 0 2px; }
+
+  .virt-lines {
+    margin: 2px 14px 4px 52px;
+    padding: 3px 9px;
+    border-left: 2px solid var(--iris);
+    color: var(--subtle);
+    font-size: 11.5px;
+    line-height: 1.5;
+    user-select: none;
+  }
+  .virt-lines.outdated { border-left-color: var(--gold); color: var(--gold); }
+
+  .thread-stack {
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
     display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 10px;
+    flex-direction: column;
+    border-right: 1px solid var(--hl-med);
   }
-  .inline-card.outdated {
-    border-left-color: var(--gold);
-    background: rgba(246, 193, 119, 0.09);
+  .thread-stack:last-child { border-right: none; }
+  .thread-stack > .tui-win { border-right: none; }
+  .win-composer {
+    flex: 0 0 112px;
+    border-top: 1px solid var(--hl-med);
+    background: #1d1b2d;
   }
-  .inline-card.resolved {
-    border-left-color: var(--pine);
-    opacity: 0.84;
+  .composer-buf {
+    flex: 1;
+    width: 100%;
+    resize: none;
+    border: none;
+    outline: none;
+    background: transparent;
+    color: var(--text);
+    padding: 6px 10px;
+    font-size: 12.5px;
+    line-height: 1.55;
   }
+  .md-h2 { color: var(--iris); font-weight: 700; margin: 4px 0 3px; }
+  .md-dim { color: var(--muted); }
+  .md-line { padding: 2px 12px; line-height: 1.58; }
 
   /* Right Agent Dock */
   .win-dock {
@@ -328,22 +382,26 @@
   }
   .dock-tabs {
     display: flex;
+    flex-shrink: 0;
     border-bottom: 1px solid var(--hl-med);
     background: #1d1b2d;
-    font-family: var(--sans);
-    font-size: 11.5px;
+    font-size: 12px;
+    user-select: none;
   }
   .dock-tab {
-    flex: 1;
+    flex: 0 0 auto;
     text-align: center;
-    padding: 5px 4px;
+    padding: 4px 12px;
     color: var(--muted);
     cursor: pointer;
-    border-bottom: 2px solid transparent;
+    border-right: 1px solid var(--hl-med);
+    border-top: 2px solid transparent;
   }
+  .dock-tab:hover { color: var(--text); background: var(--hl-low); }
   .dock-tab.active {
     color: var(--text);
-    border-bottom-color: var(--rose);
+    background: var(--overlay);
+    border-top-color: var(--rose);
     font-weight: 600;
   }
 
@@ -405,66 +463,32 @@
     color: var(--subtle);
   }
 
-  .composer {
-    border-top: 1px solid var(--hl-med);
-    padding: 7px 9px;
-    background: #1d1b2d;
-    font-family: var(--sans);
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    position: relative;
-  }
-  .composer textarea {
-    width: 100%;
-    min-height: 42px;
-    max-height: 96px;
-    resize: vertical;
-    background: var(--base);
-    border: 1px solid var(--hl-med);
-    border-radius: 5px;
-    padding: 5px 8px;
-    font-size: 12px;
-  }
-  .composer textarea:focus {
-    outline: none;
-    border-color: var(--iris);
-  }
-  .composer-bar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 6px;
-  }
   .menu-pop {
     position: absolute;
-    right: 8px;
-    bottom: 36px;
-    background: var(--overlay);
-    border: 1px solid var(--hl-high);
-    border-radius: 6px;
-    padding: 4px;
+    right: 10px;
+    bottom: 98px;
+    background: var(--surface);
+    border: 1px solid var(--iris);
+    border-radius: 4px;
+    padding: 4px 0;
     box-shadow: 0 12px 28px rgba(10, 9, 18, 0.68);
     display: flex;
     flex-direction: column;
-    gap: 2px;
-    z-index: 15;
-    min-width: 185px;
+    z-index: 22;
+    min-width: 220px;
   }
-  .menu-pop button {
-    background: transparent;
-    border: none;
-    text-align: left;
-    padding: 5px 8px;
-    border-radius: 4px;
+  .menu-row {
+    padding: 4px 10px;
     cursor: pointer;
-    font-size: 11.5px;
+    font-size: 12px;
+    color: var(--text);
   }
-  .menu-pop button:hover { background: var(--hl-med); }
+  .menu-row:hover { background: var(--hl-med); }
 
   /* Optional Bottom Shelf */
   .tui-shelf {
     height: 176px;
+    flex-shrink: 0;
     border-top: 1px solid var(--hl-med);
     background: #201e31;
     display: flex;
@@ -486,26 +510,54 @@
   /* Statusline & Cmdline */
   .tui-statusline {
     display: flex;
+    flex-shrink: 0;
     align-items: center;
     justify-content: space-between;
-    padding: 3px 10px;
+    padding: 0;
     background: var(--surface);
     border-top: 1px solid var(--hl-med);
     font-size: 11.5px;
     user-select: none;
     gap: 10px;
   }
+  .status-left { display: flex; align-items: stretch; align-self: stretch; min-width: 0; }
+  .status-mode { display: flex; align-items: center; padding: 0 10px; background: var(--iris); color: var(--base); }
+  .status-file { display: flex; align-items: center; padding: 0 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .status-thread { display: flex; align-items: center; align-self: stretch; padding: 0 10px; background: var(--overlay); color: var(--subtle); }
   .tui-cmdline {
     display: flex;
+    flex-shrink: 0;
     align-items: center;
     justify-content: space-between;
+    height: 24px;
+    min-height: 24px;
     padding: 3px 10px;
     background: #191726;
     border-top: 1px solid #232036;
-    font-size: 11.5px;
+    font-size: 12px;
     color: var(--subtle);
     gap: 10px;
   }
+  .tui-cmdline > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tui-leader-guide {
+    position: absolute;
+    right: 12px;
+    bottom: 52px;
+    z-index: 20;
+    min-width: 280px;
+    padding: 9px 11px;
+    background: var(--overlay);
+    border: 1px solid var(--iris);
+    border-radius: 6px;
+    box-shadow: 0 12px 30px rgba(10, 9, 18, 0.55);
+    color: var(--text);
+    font-size: 12px;
+    pointer-events: none;
+  }
+  .leader-guide-title { color: var(--iris); margin-bottom: 6px; font-weight: 700; }
+  .leader-guide-grid { display: grid; grid-template-columns: repeat(3, auto); gap: 4px 18px; }
+  .leader-guide-grid span { white-space: nowrap; }
+  .leader-guide-grid b { color: var(--foam); font-weight: 600; }
 
   /* Semantic Tags (Rosé Pine Moon) */
   .tag {
@@ -518,7 +570,7 @@
     font-weight: 600;
   }
   .tag-foam { background: rgba(156, 207, 216, 0.16); color: var(--foam); }
-  .tag-pine { background: rgba(62, 143, 176, 0.22); color: #8ecae6; }
+  .tag-pine { background: rgba(62, 143, 176, 0.22); color: var(--pine); }
   .tag-gold { background: rgba(246, 193, 119, 0.18); color: var(--gold); }
   .tag-rose { background: rgba(234, 154, 151, 0.18); color: var(--rose); }
   .tag-iris { background: rgba(196, 167, 231, 0.18); color: var(--iris); }
@@ -577,7 +629,7 @@
     justify-content: space-between;
   }
   .pre-diagram {
-    background: #1c1a2b;
+    background: var(--surface);
     border: 1px solid var(--hl-med);
     border-radius: 6px;
     padding: 9px 11px;
@@ -601,22 +653,6 @@
   }
   table.tbl th { background: var(--surface); }
 
-  .log-box {
-    max-height: 185px;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
-  .log-row {
-    padding: 4px 7px;
-    border-radius: 4px;
-    background: var(--surface);
-    border-left: 2.5px solid var(--foam);
-    font-size: 11px;
-  }
-  .log-row.warn { border-left-color: var(--gold); }
-  .log-row.guard { border-left-color: var(--love); }
   .hidden { display: none !important; }
 </style>
 </head>
@@ -627,15 +663,11 @@
   <header class="proto-bar">
     <div class="proto-left">
       <span class="logo">pide.nvim</span>
-      <strong>Neovim 交互规格原型 · Rosé Pine Moon</strong>
-      <span style="color:var(--subtle); font-size:12px;">
-        代码区仅用 <kbd>Space</kbd><kbd>a</kbd>…（不污染原生 <kbd>c</kbd>/<kbd>r</kbd>/<kbd>gd</kbd>/<kbd>gt</kbd>）：<kbd>Space</kbd><kbd>ac</kbd> 评论 · <kbd>Space</kbd><kbd>as</kbd> 排队发送 · <kbd>Space</kbd><kbd>ad</kbd> Diff · <kbd>Space</kbd><kbd>al</kbd> 评论架 · <kbd>Space</kbd><kbd>ai</kbd> 聚焦输入 · <kbd>Ctrl+h/l</kbd> 切窗
-      </span>
+      <strong>Neovim 交互规格原型</strong>
     </div>
     <div class="proto-right">
       <button id="tabSimBtn" class="btn active" onclick="setPageView('sim')">Neovim 工作界面</button>
       <button id="tabAtlasBtn" class="btn" onclick="setPageView('atlas')">交互规格表（6 大模块）</button>
-      <button id="debugToggleBtn" class="btn" onclick="toggleDebugDrawer()">调试抽屉: 关</button>
       <button class="btn btn-xs" onclick="resetAll()">↺ 重置</button>
     </div>
   </header>
@@ -644,29 +676,29 @@
   <section id="loopStrip" class="loop-bar">
     <div id="loopCard1" class="loop-card active" onclick="startLoop(1)">
       <div class="loop-head">
-        <span>闭环 1：代码选区提问（统一默认后续排队）</span>
-        <span class="tag tag-foam">零跳动</span>
+        <span>闭环 1：打开独立 Thread 主会话</span>
+        <span class="tag tag-foam">主区域宽版</span>
       </div>
       <div class="loop-steps">
-        <kbd>j</kbd>/<kbd>k</kbd> 移动 → <kbd>v</kbd> 选代码 → <kbd>Space</kbd><kbd>as</kbd> 发送（代码与 Chat 统一默认 Follow-up，<b>不自动开 Shelf、不移焦点</b>）→ <kbd>Space</kbd><kbd>ai</kbd> 随时进输入框
+        正常打开文件 → <kbd>Space</kbd><kbd>ai</kbd> 打开当前 Thread buffer（没有则新建）→ 在主区域阅读与输入 → <kbd>Tab</kbd> 切换 Thread，<kbd>q</kbd> 返回代码
       </div>
     </div>
     <div id="loopCard2" class="loop-card" onclick="startLoop(2)">
       <div class="loop-head">
-        <span>闭环 2：双侧 Diff Review 与多目标发送</span>
-        <span class="tag tag-rose">Base + Modified</span>
+        <span>闭环 2：代码评论与分批投递</span>
+        <span class="tag tag-rose">下划线锚点</span>
       </div>
       <div class="loop-steps">
-        <kbd>Space</kbd><kbd>ad</kbd> 进入 Diff（支持 Base/Modified 双侧锚定评论；窄屏自动收 Dock 转底部 Shelf）→ <kbd>Space</kbd><kbd>al</kbd> 选「发送到：并行子代理 / 当前会话」
+        <kbd>Space</kbd><kbd>ac</kbd> 打开评论小窗直接编辑（已有评论则直接编辑）→ 侧栏勾选一批发往 Thread A → 再勾选剩余草稿发往 Thread B 或新 Thread
       </div>
     </div>
     <div id="loopCard3" class="loop-card" onclick="startLoop(3)">
       <div class="loop-head">
-        <span>闭环 3：历史分叉、三步合并与视图返回栈</span>
-        <span class="tag tag-iris">栈式返回</span>
+        <span>闭环 3：Fork、Skill 拆分与公共前缀 Merge</span>
+        <span class="tag tag-iris">真实谱系</span>
       </div>
       <div class="loop-steps">
-        <kbd>Space</kbd><kbd>at</kbd> 打开分支树（插件只读 Buffer 内用 <kbd>j</kbd>/<kbd>k</kbd>/<kbd>p</kbd>/<kbd>s</kbd>/<kbd>m</kbd>）→ 进入三步合并 → 按 <kbd>q</kbd> 先退回分支树，再按 <kbd>q</kbd> 回代码
+        Thread 内 <kbd>f</kbd> Fork / <kbd>s</kbd> 拆分 skill → 记录 parentId 与 entry lineage → <kbd>m</kbd> 选择多个 Threads 合并；公共前缀只继承一次，无祖先则 handoff
       </div>
     </div>
   </section>
@@ -686,54 +718,12 @@
 
         <div id="tuiStatusline" class="tui-statusline"></div>
         <div id="tuiCmdline" class="tui-cmdline"></div>
+        <div id="tuiLeaderGuide" class="tui-leader-guide hidden"></div>
 
         <div id="tuiOverlay" class="tui-overlay hidden"></div>
       </div>
     </div>
 
-    <!-- Collapsible Debug / Probe Drawer -->
-    <aside id="debugDrawer" class="debug-drawer hidden">
-      <div style="display:flex; justify-content:space-between; align-items:center;">
-        <strong>规格验证探针（非产品常驻 UI）</strong>
-        <span class="tag tag-dim">Rosé Pine Moon</span>
-      </div>
-
-      <div>
-        <div style="color:var(--subtle); font-size:11.5px; margin-bottom:4px;">终端总列宽：<b id="colsLabel">140</b> 列（扣除面板剩余代码宽：<b id="effColsLabel">98</b> 列）</div>
-        <input id="colsSlider" type="range" min="74" max="160" value="140" style="width:100%;" oninput="setTotalCols(Number(this.value))" />
-        <div style="color:var(--muted); font-size:11px;">窄屏 Review 时自动记住并隐藏右侧 Dock，迁入底部 Comments Shelf，避免双处重复展示评论。</div>
-      </div>
-
-      <div style="display:flex; flex-wrap:wrap; gap:5px;">
-        <button class="btn btn-xs" onclick="toggleLeftNav()">左侧导航 (<kbd>Space</kbd><kbd>an</kbd>)</button>
-        <button class="btn btn-xs" onclick="toggleDock()">右侧 Dock (<kbd>Space</kbd><kbd>aa</kbd>)</button>
-        <button class="btn btn-xs" onclick="toggleShelf('comments')">底部 Shelf (<kbd>Space</kbd><kbd>al</kbd>)</button>
-        <button class="btn btn-xs" onclick="openWorkspacePicker()">切工作区 (<kbd>Space</kbd><kbd>aw</kbd>)</button>
-      </div>
-
-      <div style="border-top:1px solid var(--hl-med); padding-top:8px; display:flex; flex-wrap:wrap; gap:5px;">
-        <button class="btn btn-xs" onclick="simulateAgentReplyComments()">模拟 Agent 回复处理中评论 → 待确认</button>
-        <button class="btn btn-xs" onclick="toggleDirty()">切换未保存脏状态 [&amp;modified]</button>
-        <button class="btn btn-xs" onclick="simulateAgentWrite('shift')">模拟插入 2 行 (安静 moved)</button>
-        <button class="btn btn-xs" onclick="simulateAgentWrite('rewrite')">模拟改写锚定行 (告警 outdated)</button>
-        <button class="btn btn-xs" onclick="notifyPendingQuestion()">模拟 Agent 提问 (非抢占提示)</button>
-        <button class="btn btn-xs" onclick="cycleThreadState()">切换会话状态 (运行/空闲/未读)</button>
-        <button class="btn btn-xs" onclick="toggleRunningDefaultPref()">Chat 运行中回车偏好: <span id="enterPrefLabel">Follow-up</span></button>
-        <button class="btn btn-xs" onclick="toggleBackend()">后端: <span id="backendLabel">Pi</span></button>
-      </div>
-
-      <div style="border-top:1px solid var(--hl-med); padding-top:8px;">
-        <div id="debugKv" style="font-family:var(--mono); font-size:11px; color:var(--subtle); line-height:1.6;"></div>
-      </div>
-
-      <div style="border-top:1px solid var(--hl-med); padding-top:8px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-          <span style="color:var(--subtle); font-size:11px;">交互与焦点栈日志</span>
-          <button class="btn btn-xs btn-quiet" onclick="state.logs=[]; render();">清空</button>
-        </div>
-        <div id="debugLogs" class="log-box"></div>
-      </div>
-    </aside>
   </main>
 
   <!-- ==================== VIEW 2: SPECIFICATION TABLES (6 MODULES) ==================== -->
@@ -742,30 +732,32 @@
       <h3>1. 键位作用域边界（绝不污染原生 Vim 操作符） <span>规格 §18.3, §19.7</span></h3>
       <table class="tbl">
         <tr><th>Buffer 类型</th><th>允许的键位形式</th><th>禁止事项与原因</th></tr>
-        <tr><td><strong>可编辑代码 / Diff Buffer</strong></td><td>仅注册 <code>&lt;leader&gt;a…</code> 前缀命令（如 <code>ac</code> 评论、<code>as</code> 发送、<code>ad</code> Diff、<code>ab</code> 切新旧侧、<code>ai</code> 聚焦输入）与窗口跳转 <code>&lt;C-w&gt;h/j/k/l</code></td><td>严禁占用 <code>c/C</code>（修改）、<code>r</code>（替换）、<code>gd</code>（跳定义）、<code>gt</code>（切 Tab）、<code>gq/gw</code>（排版）</td></tr>
-        <tr><td><strong>pide 只读插件 Buffer / 浮窗</strong></td><td>Buffer-local 短键：<code>j/k</code> 移动、<code>Enter</code> 执行、<code>Space</code> 勾选、<code>p</code> 预览、<code>t</code> 发送目标/新 Tab、<code>S</code> 紧急插话发送、<code>r</code> 解决或撤回、<code>d</code> 忽略、<code>q/Esc</code> 栈式返回</td><td>所有浮窗（模型、发送目标、工作区、提问）均完整支持纯键盘闭环</td></tr>
+        <tr><td><strong>可编辑代码 / Diff Buffer</strong></td><td>仅注册 <code>&lt;leader&gt;a…</code> 前缀命令（如 <code>ac</code> 评论小窗新建/编辑、<code>av</code> 打开当前行关联 Thread、<code>ai</code> 打开 Thread、<code>as</code> 发送、<code>ad</code> Diff、<code>ab</code> 切新旧侧）；窗口跳转沿用原生 <code>&lt;C-w&gt;h/j/k/l</code>，pide 不新增、不改写任何窗口键</td><td>严禁占用 <code>c/C</code>（修改）、<code>r</code>（替换）、<code>gd</code>（跳定义）、<code>gt</code>（切 Tab）、<code>gq/gw</code>（排版）</td></tr>
+        <tr><td><strong>pide 只读插件 Buffer / 浮窗</strong></td><td>Buffer-local 短键：<code>j/k</code> 移动、<code>Enter</code> 执行/定位、<code>Space</code> 勾选、<code>p</code> 预览、Thread 内 <code>Tab</code> 切换会话、<code>n</code> 新建、<code>f</code> Fork、<code>s</code> 拆分 skill、<code>m</code> Merge、<code>1/2</code> 主会话/相关评论、<code>t</code> 发送目标/新 Tab、<code>S</code> 紧急插话发送、<code>v</code> 查看评论关联 Thread、<code>r</code> 撤回（Queue）、<code>d</code> 清理/忽略评论、<code>q/Esc</code> 栈式返回</td><td>所有浮窗（模型、发送目标、工作区、提问）均完整支持纯键盘闭环</td></tr>
       </table>
     </div>
 
     <div class="acard">
       <h3>2. 评论派生生命周期与严格状态动作表 <span>规格 §8.2–8.6</span></h3>
-      <pre class="pre-diagram">草稿 (draft) ──发送──▶ 已排队 (sent+queued) ──轮到执行──▶ 处理中 (sent+running) ──收到关联回复──▶ 待确认 (sent+reply) ──▶ 已解决 (resolved)
-   │                        │ (撤回/Stop/Compact)                                                           │                     │
-   └──忽略──▶ 已忽略         └────────────── 统一回退为「草稿」并还原文字+引用                               └──继续追问            └──重开 (保留历史)</pre>
+      <pre class="pre-diagram">草稿 (draft) ──发送──▶ 已排队 (sent+queued) ──轮到执行──▶ 处理中 (sent+running) ──收到关联回复──▶ 已回复 (sent+reply)
+   │                        │ (Thread/Queue 撤回、Stop、Compact)                                                           │
+   └──d──▶ 已清理            └────────────── 统一回退为「草稿」并还原文字+引用                               └──Enter 定位代码 / v 转到 Thread / d 清理</pre>
       <table class="tbl">
-        <tr><th>派生展示状态</th><th>允许动作（禁止跨状态误标“解决”）</th></tr>
-        <tr><td><strong>草稿</strong> / <strong>已忽略</strong></td><td>草稿：<code>发送</code>、<code>编辑</code>、<code>忽略</code>；已忽略：<code>恢复为草稿</code></td></tr>
-        <tr><td><strong>已排队</strong> / <strong>处理中</strong></td><td>已排队：<code>撤回编辑</code>（回退草稿）；处理中：<code>查看目标会话</code>（未回复前不伪造“待确认”）</td></tr>
-        <tr><td><strong>待确认</strong> / <strong>已解决</strong></td><td>待确认：<code>解决</code>、<code>要求继续修改</code>；已解决：<code>重开</code>（保留上下文与历史回复）</td></tr>
+        <tr><th>派生展示状态</th><th>原生 Neovim 0.12+ TUI 表现与按键动作（无 HTML 按钮）</th></tr>
+        <tr><td><strong>草稿</strong> / <strong>已清理</strong></td><td>草稿：代码行 extmark 下划线 + 行下方常驻只读 <code>virt_lines</code> 直接展示正文；<code>Space ac</code> 打开小窗直接编辑、侧栏 <code>Space</code> 勾选后点 <code>发送勾选草稿 (s)</code> 批量投递、<code>Enter</code> 定位、<code>d</code> 清理</td></tr>
+        <tr><td><strong>已排队</strong> / <strong>处理中</strong> / <strong>已回复</strong></td><td>代码行下方 <code>virt_lines</code> 与侧栏完整换行展示评论及 <code>↳ 回复：…</code>；<code>Enter</code> 跳代码行、<code>v</code> 查看 Thread、<code>d</code> 清理已读评论（撤回排队项统一在 Thread/Queue 按 <code>r</code>）</td></tr>
+        <tr><td><strong>双 Buffer Thread 主视图</strong></td><td>上方只读 Markdown buffer (<code>pide://thread/&lt;id&gt;</code>) + 下方输入 split (<code>pide://composer/&lt;id&gt;</code>)，专用窗口启用 <code>winfixbuf</code>；<code>winbar</code> 支持 <code>%@</code> 点击与短键切换</td></tr>
       </table>
     </div>
 
     <div class="acard">
-      <h3>3. 双侧 Diff 与窄屏单栏 Base ⇄ Modified 切换 <span>规格 §8.1, §19.4</span></h3>
+      <h3>3. 双侧 Diff、统一 Comment 与现有重定位规则 <span>规格 §8.1–8.5, §19.4</span></h3>
       <table class="tbl">
         <tr><th>场景</th><th>精确窗口行为</th></tr>
-        <tr><td><strong>宽屏 Diff Review</strong></td><td><code>Base (可定位评论) | Modified (可定位评论) | 右侧复用 Dock 切到 Review 页</code>（严格最多三栏）；评论携带 <code>side: base | modified</code></td></tr>
+        <tr><td><strong>宽屏 Diff Review</strong></td><td><code>Base (可定位评论) | Modified (可定位评论) | 右侧复用 Dock 评论页</code>（严格最多三栏）；评论携带 <code>side: base | modified</code></td></tr>
         <tr><td><strong>窄屏单栏 Diff</strong></td><td>窄屏不是禁用 Base：单栏顶栏提供 <code>Base 旧侧 ⇄ Modified 新侧</code> 切换（及 <code>&lt;leader&gt;ab</code>）；在底部 Shelf 选中 Base 评论时单栏自动切到 Base 并定位上下文，选回 Modified 评论再自动切回 Modified</td></tr>
+        <tr><td><strong>统一 Comment 模型</strong></td><td>普通文件与 Diff 共用同一评论数据、草稿、发送、队列与回复链接；Diff 只增加 <code>side</code>、固定 <code>base_ref</code> 和可选 hunk 归属，Base 锚定固定 commit</td></tr>
+        <tr><td><strong>quote/hash 与 outdated</strong></td><td>沿用现有创建时快照、内容 hash 与 text quote；原文可唯一定位时更新行号并标记 <code>moved</code>，原文不存在、匹配不唯一或文件删除时标记 <code>outdated</code> 并保留快照，发送前重新计算定位，不新增锚点系统</td></tr>
       </table>
     </div>
 
@@ -775,7 +767,7 @@
         <tr><th>机制</th><th>防抖与所有权规则</th></tr>
         <tr><td><strong>仅跨越断点才迁移</strong></td><td>记录 <code>reviewLastNarrow</code>：同一断点内继续缩放或开关导航栏时，<b>尊重用户手动改过的 Dock / Shelf 开闭状态</b>，绝不强行重开被隐藏的 Dock</td></tr>
         <tr><td><strong>区分自动与手动 Shelf</strong></td><td>记录 <code>shelfAutoOpenedByNarrow</code>：从窄屏拉回宽屏时，<b>只收起窄屏自动展开的 Shelf</b>（用户主动打开的 Shelf 原样保留），彻底杜绝双评论面板</td></tr>
-        <tr><td><strong>栈式返回</strong></td><td>退出 Review 精确恢复进入前的 Dock 页签与开闭状态；从 <code>Tree → Merge</code> 按 <code>q</code> 优先退回 <code>Tree</code></td></tr>
+        <tr><td><strong>栈式返回</strong></td><td>退出 Review 精确恢复进入前的 Dock 状态；<code>Space ai</code> 将 Thread buffer 推入主区域并隐藏评论侧栏，按 <code>q</code> 返回原代码/Diff 与面板状态；从 <code>Tree → Merge</code> 按 <code>q</code> 优先退回 <code>Tree</code></td></tr>
       </table>
     </div>
 
@@ -789,12 +781,14 @@
     </div>
 
     <div class="acard">
-      <h3>6. 统一运行中默认队列、多目标与低频评论 Steer <span>规格 §7.2, §8.3, §9.2, §21</span></h3>
+      <h3>6. Thread、评论目标与谱系 Merge <span>规格 §7.2, §8.3, §9, §21</span></h3>
       <table class="tbl">
         <tr><th>入口</th><th>统一心智模型</th></tr>
-        <tr><td><strong>运行中默认发送</strong></td><td>代码区（<code>&lt;leader&gt;as</code> 弹单行提问框即发并留代码区）与 Chat 输入框（<code>&lt;Enter&gt;</code>）统一默认 <b>Follow-up</b>；<code>Steer</code> 统一作为显式次级动作（<code>&lt;leader&gt;aS</code> / <code>&lt;Alt+Enter&gt;</code>）</td></tr>
-        <tr><td><strong>单条与批量目标防串台</strong></td><td>行内单条评论固定发给<b>当前活跃会话</b>（写明会话名，不继承批量目标）；评论架批量发送显示 <code>发送已勾选 (N) → 目标</code>（<code>N = 0</code> 禁发）；并行子代理结果直接接入合并页且 <code>0</code> 来源禁止创建新会话</td></tr>
-        <tr><td><strong>工作区隔离与非抢占提问</strong></td><td>每个 Workspace 独立持有评论、多会话列表与各自队列（切换互不串台、后台任务不断）；AI 普通提问先在状态栏/Dock 非抢占提示，按 <code>&lt;leader&gt;ar</code> 或点击才开对比浮窗</td></tr>
+        <tr><td><strong>Thread 主视图</strong></td><td><code>&lt;leader&gt;ai</code> 打开当前 Thread buffer（没有则创建），在主区域显示完整 transcript、Plan、队列和输入框；<code>Tab</code> 切换 Thread，<code>q</code> 栈式返回代码</td></tr>
+        <tr><td><strong>评论编辑与分批投递</strong></td><td>代码/Diff 中 <code>&lt;leader&gt;ac</code> 直接打开评论小窗新建或编辑当前行草稿，无单条“发送到当前 Thread”或“编辑”按钮；所有发送统一通过侧栏/Shelf 勾选一批投递到当前、指定或新 Thread，<code>N = 0</code> 禁发</td></tr>
+        <tr><td><strong>运行中发送与撤回</strong></td><td>空闲立即发送，运行中默认 Follow-up，显式选择才 Steer；发送不是填入输入框等待，撤回未消费项统一在 Thread/Queue 完成并回滚草稿</td></tr>
+        <tr><td><strong>Fork 与 Skill 拆分</strong></td><td>Thread 内 <code>f</code> 显式 Fork，<code>s</code> 通过拆分 skill 创建子 Threads；记录 parentId、forkEntryId 与 entry lineage，不再需要独立“任务”页</td></tr>
+        <tr><td><strong>公共前缀 Merge</strong></td><td>仅对真实公共祖先继承一次并合并分叉后缀；Pi append-only entry tree 与 fork 提供谱系优势，但跨独立 Threads 仍由 pide 执行 handoff merge，不伪造公共前缀</td></tr>
       </table>
     </div>
   </section>
@@ -808,7 +802,6 @@ const WORKSPACES = {
     name: "feat/auth",
     kind: "隔离分支 worktree",
     file: "lua/auth/jwt.lua",
-    verified: true,
     planStep: "Step 2/3 · 校验过期与时钟容差",
     baseLines: [
       "local M = {}",
@@ -849,7 +842,6 @@ const WORKSPACES = {
     name: "fix/retry-backoff",
     kind: "隔离分支 worktree",
     file: "lua/net/retry.lua",
-    verified: false,
     planStep: "Step 1/2 · 指数退避抖动上限",
     baseLines: [
       "local M = {}",
@@ -873,11 +865,9 @@ const WORKSPACES = {
 };
 
 const SEND_TARGETS = [
-  { id: "current", label: "当前会话 · 后续排队（默认）" },
-  { id: "current_steer", label: "当前会话 · 紧急插话 (Steer)", piOnly: true },
-  { id: "new_thread", label: "新建独立会话" },
-  { id: "history_thread", label: "历史会话：重试退避修复" },
-  { id: "subagents", label: "并行子代理（按评论分叉）" }
+  { id: "current", label: "当前 Thread（默认目标）" },
+  { id: "current_steer", label: "当前 Thread · 紧急插话 (Steer)", piOnly: true },
+  { id: "new_thread", label: "新建独立 Thread" }
 ];
 
 const MODELS = [
@@ -903,7 +893,10 @@ function createWorkspaceStore() {
       threads: [
         {
           id: "t1",
-          title: "鉴权会话 · JWT 校验",
+          parentId: null,
+          forkEntryId: null,
+          entryLineage: ["t1:n1", "t1:n2"],
+          title: "鉴权 Thread · JWT 校验",
           status: "running",
           pendingQuestion: false,
           composerDraft: "",
@@ -917,6 +910,11 @@ function createWorkspaceStore() {
               { id: "sys1", text: "子代理 scout 已完成 4 处调用点扫描（独立通道）" }
             ]
           },
+          plan: [
+            { text: "提取 Bearer 令牌格式校验", state: "done" },
+            { text: "校验 exp 与 30s 时钟偏移容差", state: "active" },
+            { text: "补齐过期与篡改签名回归用例", state: "pending" }
+          ],
           chat: [
             { role: "你", text: "梳理并加固 verify_token 的边界错误处理。" },
             { role: "Agent", text: "已定位鉴权入口，正在验证过期与空值分支：", ref: { file: "lua/auth/jwt.lua", line: 12 } }
@@ -924,29 +922,33 @@ function createWorkspaceStore() {
         },
         {
           id: "t2",
-          title: "鉴权副会话 · 旧版兼容排查",
+          parentId: "t1",
+          forkEntryId: "n2",
+          entryLineage: ["t1:n1", "t1:n2", "t2:n3"],
+          title: "鉴权副 Thread · 旧版兼容排查",
           status: "idle",
           pendingQuestion: false,
           composerDraft: "",
           composerRefs: [],
           queue: { steering: [], followUp: [], system: [] },
           chat: [
+            { role: "系统", text: "从鉴权 Thread 的 n2 分叉；公共前缀保持只读。" },
             { role: "你", text: "单独核对旧版移动端请求头格式。" },
             { role: "Agent", text: "已确认 v1 客户端存在小写 bearer 前缀调用。" }
           ]
         }
       ],
       comments: [
-        { id: "C-1", side: "modified", line: 7, origLine: 7, selected: true, persisted: "draft", anchor: "anchored", quote: "local token = header:match('^Bearer%s+(.+)$')", text: "是否需要兼容小写 bearer 前缀？", targetLabel: null, reply: null },
-        { id: "C-2", side: "modified", line: 12, origLine: 12, selected: false, persisted: "sent", anchor: "anchored", quote: "if claims.exp < os.time() then", text: "claims.exp 为空时会抛比较错误", targetLabel: "鉴权会话 · JWT 校验", reply: "已加入 type(claims.exp) == 'number' 校验并跑通单测" },
-        { id: "C-3", side: "base", line: 5, origLine: 5, selected: true, persisted: "draft", anchor: "anchored", quote: "local token = header:sub(8)", text: "旧实现硬编码截取第 8 位，正是多空格 bug 根源", targetLabel: null, reply: null }
+        { id: "C-1", side: "modified", base_ref: "HEAD~1", line: 7, origLine: 7, selected: true, persisted: "draft", anchor: "anchored", quote: "local token = header:match('^Bearer%s+(.+)$')", text: "是否需要兼容小写 bearer 前缀？", targetLabel: null, reply: null },
+        { id: "C-2", side: "modified", base_ref: "HEAD~1", line: 12, origLine: 12, selected: false, persisted: "sent", anchor: "anchored", quote: "if claims.exp < os.time() then", text: "claims.exp 为空时会抛比较错误", targetThreadId: "t1", targetLabel: "鉴权 Thread · JWT 校验", reply: "已加入 type(claims.exp) == 'number' 校验并跑通单测" },
+        { id: "C-3", side: "base", base_ref: "HEAD~1", line: 5, origLine: 5, selected: true, persisted: "draft", anchor: "anchored", quote: "local token = header:sub(8)", text: "旧实现硬编码截取第 8 位，正是多空格 bug 根源", targetLabel: null, reply: null }
       ],
       mergeSources: [
-        { id: "s1", checked: true, name: "鉴权会话 · Bearer 与过期校验", note: "提供基础实现与单测证据" },
-        { id: "s2", checked: true, name: "鉴权副会话 · 旧版兼容排查", note: "确认兼容小写前缀不影响吊销逻辑" },
-        { id: "s3", checked: false, name: "历史分支 · 双 Header 过渡方案", note: "与严格规范冲突，默认排除" }
+        { id: "s1", threadId: "t1", checked: true, name: "鉴权 Thread · Bearer 与过期校验", note: "提供基础实现与单测证据" },
+        { id: "s2", threadId: "t2", checked: true, name: "鉴权副 Thread · 旧版兼容排查", note: "确认兼容小写前缀不影响吊销逻辑" },
+        { id: "s3", threadId: null, lineage: ["external:summary"], checked: false, name: "独立 Thread · 双 Header 过渡方案", note: "无公共祖先，只能 handoff merge" }
       ],
-      mergeSummary: "## 合并结论摘要\n- 保留 nil, err 返回风格\n- 采纳大小写无关 Bearer 匹配 + 30s leeway\n- 源会话历史保持只读不变"
+      mergeSummary: "## 合并结论摘要\n- 公共前缀 t1:n1 → t1:n2 只继承一次\n- 仅合并 n2 后的有效结论\n- 保留 nil, err 返回风格与 30s leeway\n- 源 Thread 历史保持只读不变"
     },
     retry: {
       baseLines: [...WORKSPACES.retry.baseLines],
@@ -959,7 +961,10 @@ function createWorkspaceStore() {
       threads: [
         {
           id: "rt1",
-          title: "重试会话 · 退避抖动",
+          parentId: null,
+          forkEntryId: null,
+          entryLineage: ["rt1:root"],
+          title: "重试 Thread · 退避抖动",
           status: "idle",
           pendingQuestion: false,
           composerDraft: "",
@@ -972,10 +977,10 @@ function createWorkspaceStore() {
         }
       ],
       comments: [
-        { id: "R-1", side: "modified", line: 5, origLine: 5, selected: true, persisted: "draft", anchor: "anchored", quote: "local jitter = math.random(0, math.floor(exp_delay * 0.2))", text: "math.random 未播种时多 worker 重试抖动是否同步？", targetLabel: null, reply: null }
+        { id: "R-1", side: "modified", base_ref: "HEAD~1", line: 5, origLine: 5, selected: true, persisted: "draft", anchor: "anchored", quote: "local jitter = math.random(0, math.floor(exp_delay * 0.2))", text: "math.random 未播种时多 worker 重试抖动是否同步？", targetLabel: null, reply: null }
       ],
       mergeSources: [
-        { id: "rs1", checked: true, name: "重试会话 · 指数退避上限分析", note: "确认 cap_ms 防止指数溢出" }
+        { id: "rs1", threadId: "rt1", checked: true, name: "重试 Thread · 指数退避上限分析", note: "确认 cap_ms 防止指数溢出" }
       ],
       mergeSummary: "## 重试工作区合并摘要\n- 统一使用独立随机源计算 20% 抖动\n- 保留 cap_ms 硬上限"
     }
@@ -985,7 +990,6 @@ function createWorkspaceStore() {
 function initState() {
   const core = {
     pageView: "sim",
-    debugOpen: false,
     activeLoop: 1,
     totalCols: 140,
     backend: "pi", // pi | acp
@@ -1004,7 +1008,7 @@ function initState() {
     leftNavIdx: 0,
 
     dockOpen: true,
-    dockTab: "chat",
+    dockTab: "review",
     dockIdx: 0,
     preReviewSnapshot: null,
     reviewLastNarrow: null,
@@ -1035,9 +1039,9 @@ function initState() {
     mergeIdx: 0,
 
     overlay: null,
-    statusNotice: "就绪 · 代码区按 Space a s 提问发送，Space a c 添加评论（原生 c/r/gd/gt 完整保留给 Vim）",
+    statusNotice: "",
     logs: [
-      { kind: "info", text: "初始化完成：各工作区代码、评论与多会话状态独立隔离。" }
+      { kind: "info", text: "初始化完成：各工作区代码、评论与多 Thread 状态独立隔离。" }
     ]
   };
 
@@ -1088,7 +1092,7 @@ function switchActiveThread(threadId) {
   const target = wsData.threads.find(t => t.id === threadId);
   if (!target) return;
   wsData.activeThreadId = target.id;
-  state.statusNotice = `当前发送目标会话已切换为「${target.title}」（各自队列独立）`;
+  state.statusNotice = `当前发送目标 Thread 已切换为「${target.title}」（各自队列独立）`;
   render();
 }
 
@@ -1104,27 +1108,37 @@ function currentWs() {
 
 /* Derived Comment UI Status & Allowed Actions (Review Fix #2) */
 function isCommentQueued(id) {
-  return [...state.queue.steering, ...state.queue.followUp].some(q => (q.commentIds || []).includes(id));
+  return currentWsData().threads.some(th =>
+    [...th.queue.steering, ...th.queue.followUp].some(q => (q.commentIds || []).includes(id))
+  );
 }
 
 function deriveCommentView(c) {
   if (c.persisted === "draft") {
-    return { key: "draft", label: "草稿", tagCls: "tag-gold", actions: ["send", "edit", "dismiss"] };
+    return { key: "draft", label: "草稿", tagCls: "tag-gold", actions: ["dismiss"] };
   }
   if (c.persisted === "dismissed") {
-    return { key: "dismissed", label: "已忽略", tagCls: "tag-dim", actions: ["restore"] };
-  }
-  if (c.persisted === "resolved") {
-    return { key: "resolved", label: "已解决", tagCls: "tag-pine", actions: ["reopen"] };
+    return { key: "dismissed", label: "已清理", tagCls: "tag-dim", actions: ["restore"] };
   }
   // persisted === "sent"
   if (isCommentQueued(c.id)) {
-    return { key: "queued", label: "已排队", tagCls: "tag-foam", actions: ["withdraw"] };
+    return { key: "queued", label: "已排队", tagCls: "tag-foam", actions: ["view_thread", "dismiss"] };
   }
   if (c.reply) {
-    return { key: "pending_ack", label: "待确认", tagCls: "tag-rose", actions: ["resolve", "followup"] };
+    return { key: "replied", label: "已回复", tagCls: "tag-rose", actions: ["view_thread", "dismiss"] };
   }
-  return { key: "processing", label: "处理中", tagCls: "tag-iris", actions: ["view_thread"] };
+  return { key: "processing", label: "处理中", tagCls: "tag-iris", actions: ["view_thread", "dismiss"] };
+}
+
+function filteredComments() {
+  return state.comments.filter(c => c.persisted !== "dismissed");
+}
+
+function toggleCommentSelection(id) {
+  const comment = state.comments.find(c => c.id === id && c.persisted === "draft");
+  if (!comment) return;
+  comment.selected = !comment.selected;
+  render();
 }
 
 function effectiveCodeCols() {
@@ -1165,12 +1179,13 @@ function syncReviewLayoutForWidth(entering) {
     } else if (state.shelfAutoOpenedByNarrow) {
       state.shelfOpen = false;
       state.shelfAutoOpenedByNarrow = false;
-      logEvent("info", "跨回宽屏断点：自动收起窄屏临时展开的底部 Shelf，恢复右侧 Review Dock 单处评论。");
+      logEvent("info", "跨回宽屏断点：自动收起窄屏临时展开的底部 Shelf，恢复右侧 Dock 评论页，保持单处评论。");
     }
   }
 }
 
 function resetAll() {
+  resetLeaderSeq();
   state = initState();
   render();
 }
@@ -1182,14 +1197,6 @@ function setPageView(v) {
   document.getElementById("atlasSection").classList.toggle("hidden", v !== "atlas");
   document.getElementById("tabSimBtn").classList.toggle("active", v === "sim");
   document.getElementById("tabAtlasBtn").classList.toggle("active", v === "atlas");
-}
-
-function toggleDebugDrawer() {
-  state.debugOpen = !state.debugOpen;
-  document.getElementById("debugDrawer").classList.toggle("hidden", !state.debugOpen);
-  document.getElementById("debugToggleBtn").textContent = `调试抽屉: ${state.debugOpen ? "开" : "关"}`;
-  document.getElementById("debugToggleBtn").classList.toggle("active", state.debugOpen);
-  render();
 }
 
 function setTotalCols(cols) {
@@ -1207,15 +1214,15 @@ function startLoop(n) {
   state = initState();
   state.activeLoop = n;
   if (n === 1) {
-    state.cursorLine = 7;
-    state.visualAnchor = 10;
-    state.statusNotice = "闭环 1：已选 L7–10。按 Space a s 发送（默认安全排入 Follow-up，不弹开底部 Shelf、不移焦点）。";
+    focusChatInput();
+    state.statusNotice = "闭环 1：Space a i 打开主区域 Thread buffer；Tab 切换，q 返回代码。";
   } else if (n === 2) {
-    enterDiffReview();
-    state.statusNotice = "闭环 2：双侧 Diff Review（Ctrl+h/l 切换 Base 与 Modified 两侧均可留评论；Space a l 打开评论架选择「发送到…」）。";
+    state.cursorLine = 7;
+    openCommentCreator(false);
+    state.statusNotice = "闭环 2：Space a c 直接在小窗新建/编辑评论；右侧勾选并分批投递。";
   } else if (n === 3) {
-    openThreadTree();
-    state.statusNotice = "闭环 3：插件只读分支树（j/k 移动，p 预览，s 派发干净子代理，m 进入合并；按 q 沿视图栈逐层返回）。";
+    openMergeView();
+    state.statusNotice = "闭环 3：勾选有公共祖先的 Threads，公共前缀只继承一次；独立来源走 handoff。";
   }
   render();
 }
@@ -1256,7 +1263,11 @@ function popCenterView() {
   const prev = state.viewStack.pop();
   if (prev) {
     state.centerMode = prev.centerMode;
-    state.focusedPane = "code";
+    state.dockOpen = prev.dockOpen;
+    state.dockTab = prev.dockTab;
+    state.shelfOpen = prev.shelfOpen;
+    state.shelfTab = prev.shelfTab;
+    state.focusedPane = prev.centerMode === "thread" ? "thread" : "code";
     state.statusNotice = `已返回上一视图 [${prev.centerMode}]`;
     logEvent("info", `栈式返回 → ${prev.centerMode}。`);
   } else {
@@ -1286,7 +1297,7 @@ function enterDiffReview() {
 
 function openThreadTree() {
   if (state.backend === "acp") {
-    state.statusNotice = "当前 ACP Agent 未提供原生分支树；可通过菜单新建带交接摘要的会话";
+    state.statusNotice = "当前 ACP Agent 未提供原生分支树；可通过菜单新建带交接摘要的 Thread";
     logEvent("warn", "ACP 后端隐藏原生 Thread Tree 入口。");
     render();
     return;
@@ -1303,12 +1314,22 @@ function openMergeView() {
   render();
 }
 
-function focusChatInput() {
-  state.dockOpen = true;
-  state.dockTab = "chat";
-  state.focusedPane = "dock";
-  state.statusNotice = "已聚焦右侧 Chat 输入框（按 Esc 立即回到代码窗口）";
+function openActiveThread() {
+  if (currentWsData().threads.length === 0) createThread({ activate: true });
+  if (state.centerMode !== "thread") {
+    pushCenterView("thread");
+    state.dockOpen = false;
+    state.shelfOpen = false;
+  }
+  state.dockTab = "review";
+  state.focusedPane = "thread";
   render();
+}
+
+function focusChatInput() {
+  openActiveThread();
+  state.statusNotice = "已聚焦当前 Thread 输入框（Esc 返回 Thread）";
+  renderStatusAndCmd();
   setTimeout(() => {
     const el = document.getElementById("chatTextarea");
     if (el) el.focus();
@@ -1426,9 +1447,15 @@ function dispatchCodePrompt(ref, question, explicitSteer) {
 /* ==================== COMMENTS LIFECYCLE & SEND TARGETS ==================== */
 function openCommentCreator(multiline, editCommentId) {
   const prev = state.focusedPane;
-  const existing = editCommentId ? state.comments.find(c => c.id === editCommentId) : null;
-  const side = existing ? existing.side : (state.centerMode === "diff" ? state.diffSide : "modified");
-  const [s, e] = existing ? [existing.line, existing.line] : getSelectionRange();
+  const currentSide = state.centerMode === "diff" ? state.diffSide : "modified";
+  const [selS, selE] = getSelectionRange();
+  const inlineExisting = !editCommentId && state.visualAnchor === null
+    ? state.comments.find(c => c.side === currentSide && c.line === selS && c.persisted === "draft")
+    : null;
+  const existing = editCommentId ? state.comments.find(c => c.id === editCommentId) : inlineExisting;
+  const side = existing ? existing.side : currentSide;
+  const baseRef = existing ? existing.base_ref : (state.centerMode === "diff" ? "HEAD~1" : null);
+  const [s, e] = existing ? [existing.line, existing.line] : [selS, selE];
 
   if (multiline) {
     state.overlay = {
@@ -1436,6 +1463,7 @@ function openCommentCreator(multiline, editCommentId) {
       purpose: "comment",
       editId: existing?.id || null,
       side,
+      baseRef,
       returnPane: prev,
       line: s,
       endLine: e,
@@ -1446,6 +1474,7 @@ function openCommentCreator(multiline, editCommentId) {
       type: "comment_quick",
       editId: existing?.id || null,
       side,
+      baseRef,
       returnPane: prev,
       line: s,
       endLine: e,
@@ -1475,6 +1504,7 @@ function saveCommentFromOverlay(rawText) {
     state.comments.push({
       id,
       side: ov.side,
+      base_ref: ov.baseRef,
       line: ov.line,
       origLine: ov.line,
       selected: true,
@@ -1491,12 +1521,89 @@ function saveCommentFromOverlay(rawText) {
   state.visualAnchor = null;
   const ret = ov.returnPane || "code";
   state.overlay = null;
+  state.dockOpen = true;
+  state.dockTab = "review";
   state.focusedPane = ret;
   render();
 }
 
+function createThread(options = {}) {
+  const wsData = currentWsData();
+  const id = "t" + (wsData.threads.length + 1);
+  const thread = {
+    id,
+    title: options.title || `新 Thread #${wsData.threads.length + 1}`,
+    parentId: options.parentId ?? null,
+    parentIds: options.parentIds || [],
+    forkEntryId: options.forkEntryId || null,
+    entryLineage: options.entryLineage || [`${id}:root`],
+    origin: options.origin || "manual",
+    status: "idle",
+    pendingQuestion: false,
+    composerDraft: "",
+    composerRefs: [],
+    queue: { steering: [], followUp: [], system: [] },
+    chat: options.chat || []
+  };
+  wsData.threads.push(thread);
+  wsData.mergeSources.push({
+    id: `src_${id}`,
+    threadId: id,
+    checked: false,
+    name: thread.title,
+    note: `${thread.origin} 创建的 Thread`
+  });
+  if (options.activate !== false) wsData.activeThreadId = id;
+  return thread;
+}
+
+function newIndependentThread() {
+  const thread = createThread();
+  state.statusNotice = `已创建「${thread.title}」`;
+  render();
+}
+
+function forkActiveThread() {
+  const parent = currentThread();
+  const child = createThread({
+    title: `${parent.title} · fork`,
+    parentId: parent.id,
+    forkEntryId: parent.entryLineage[parent.entryLineage.length - 1].split(":").pop(),
+    entryLineage: [...parent.entryLineage, "pending:fork"],
+    origin: "fork",
+    chat: [{ role: "系统", text: `从「${parent.title}」分叉；公共前缀保持只读。` }]
+  });
+  child.entryLineage[child.entryLineage.length - 1] = `${child.id}:fork`;
+  state.statusNotice = `已分叉为「${child.title}」，parentId = ${parent.id}`;
+  render();
+}
+
+function splitActiveThreadWithSkill() {
+  const parent = currentThread();
+  const child = createThread({
+    title: `${parent.title} · 子任务`,
+    parentId: parent.id,
+    forkEntryId: parent.entryLineage[parent.entryLineage.length - 1].split(":").pop(),
+    entryLineage: [...parent.entryLineage, "pending:task"],
+    origin: "decompose-skill",
+    activate: false,
+    chat: [{ role: "系统", text: "由拆分 skill 创建；使用最小任务包，父子关系已记录。" }]
+  });
+  child.entryLineage[child.entryLineage.length - 1] = `${child.id}:task`;
+  state.statusNotice = `拆分 skill 已创建「${child.title}」，可在 Thread 列表中打开`;
+  render();
+}
+
 function availableSendTargets() {
-  return state.backend === "pi" ? SEND_TARGETS : SEND_TARGETS.filter(t => !t.piOnly);
+  const base = state.backend === "pi" ? SEND_TARGETS : SEND_TARGETS.filter(t => !t.piOnly);
+  const others = currentWsData().threads
+    .filter(t => t.id !== currentWsData().activeThreadId)
+    .map(t => ({ id: `thread:${t.id}`, threadId: t.id, label: `Thread：${t.title}` }));
+  return [...base, ...others];
+}
+
+function sendTargetById(id) {
+  return availableSendTargets().find(t => t.id === id) || availableSendTargets()[0];
 }
 
 function openTargetPicker() {
@@ -1515,9 +1622,36 @@ function selectSendTarget(targetId) {
   const ret = state.overlay?.returnPane || "shelf";
   state.overlay = null;
   state.focusedPane = ret;
-  const tObj = SEND_TARGETS.find(t => t.id === targetId) || SEND_TARGETS[0];
+  const tObj = sendTargetById(targetId);
   state.statusNotice = `评论发送目标已设为：${tObj.label}`;
   render();
+}
+
+function deliverCommentsToThread(targetThread, targets, explicitSteer) {
+  if (!targetThread) return { immediate: false, lane: "followUp" };
+  const tIds = targets.map(c => c.id);
+  const useSteer = Boolean(explicitSteer && state.backend === "pi");
+  const immediate = targetThread.status === "idle" || targetThread.status === "unread";
+  const text = `评论 (${tIds.join(", ")})：\n${targets.map(c => `- ${c.text}`).join("\n")}`;
+  targets.forEach(c => {
+    c.persisted = "sent";
+    c.reply = null;
+    c.targetThreadId = targetThread.id;
+    c.targetLabel = useSteer ? `${targetThread.title}·Steer` : targetThread.title;
+  });
+  if (immediate) {
+    targetThread.status = "running";
+    targetThread.chat.push({ role: "你", text });
+    return { immediate: true, lane: "followUp" };
+  }
+  const lane = useSteer ? "steering" : "followUp";
+  targetThread.queue[lane].push({
+    id: "qc" + Date.now().toString().slice(-3),
+    text,
+    refs: tIds,
+    commentIds: tIds
+  });
+  return { immediate: false, lane };
 }
 
 function dispatchComments(ids, explicitSteer, overrideTargetId) {
@@ -1529,89 +1663,24 @@ function dispatchComments(ids, explicitSteer, overrideTargetId) {
   }
   const tIds = targets.map(c => c.id);
   const chosenId = overrideTargetId || state.commentTargetId;
-  const dest = availableSendTargets().find(t => t.id === chosenId) || SEND_TARGETS[0];
+  const dest = sendTargetById(chosenId);
   const wantSteer = Boolean(explicitSteer || dest.id === "current_steer");
   const activeTitle = currentThread().title;
 
-  // Destination 4: Fork parallel subagents from current Thread & link into Merge sources!
-  if (dest.id === "subagents") {
-    targets.forEach(c => {
-      c.persisted = "sent";
-      c.reply = null;
-      c.targetLabel = "并行子代理";
-      const srcId = "sub_" + c.id;
-      if (!state.mergeSources.some(s => s.id === srcId)) {
-        state.mergeSources.push({
-          id: srcId,
-          checked: true,
-          name: `并行子代理 (${c.id}) · ${c.text}`,
-          note: `针对 L${c.line} 的独立调查结论与定位证据`
-        });
-      }
-    });
-    state.statusNotice = `已将 (${tIds.join(", ")}) 分叉为 ${tIds.length} 个并行子代理 · 结论已接入合并列表`;
-    logEvent("info", `评论 [${tIds.join(", ")}] 已分叉为并行子代理，并同步写入当前工作区可合并结论列表。`);
+  if (dest.id === "new_thread" || dest.threadId) {
+    const targetThread = dest.id === "new_thread"
+      ? createThread({ title: `评论 Thread #${currentWsData().threads.length + 1}`, activate: false })
+      : currentWsData().threads.find(t => t.id === dest.threadId);
+    deliverCommentsToThread(targetThread, targets, wantSteer);
+    state.statusNotice = `已发送 (${tIds.join(", ")}) →「${targetThread.title}」；当前 Thread 不变`;
     render();
     return;
   }
 
-  // Destination 2 or 3: New Thread or History Thread
-  if (dest.id === "new_thread" || dest.id === "history_thread") {
-    if (dest.id === "new_thread") {
-      const wsData = currentWsData();
-      const newId = "t" + (wsData.threads.length + 1);
-      const newTitle = `新会话 #${wsData.threads.length + 1} · 评论跟进`;
-      wsData.threads.push({
-        id: newId,
-        title: newTitle,
-        status: "running",
-        pendingQuestion: false,
-        composerDraft: "",
-        composerRefs: [],
-        queue: { steering: [], followUp: [], system: [] },
-        chat: [{ role: "你", text: `处理评论 (${tIds.join(", ")})：${targets[0].text}` }]
-      });
-      targets.forEach(c => { c.persisted = "sent"; c.reply = null; c.targetLabel = newTitle; });
-      state.statusNotice = `已创建「${newTitle}」并发送 ${tIds.length} 条评论 · 状态进入「处理中」`;
-    } else {
-      targets.forEach(c => { c.persisted = "sent"; c.reply = null; c.targetLabel = "历史会话"; });
-      state.statusNotice = `已将 ${tIds.length} 条评论发送至「${dest.label}」· 状态进入「处理中」`;
-    }
-    logEvent("info", `评论 [${tIds.join(", ")}] 已投递至 ${dest.label}。`);
-    render();
-    return;
-  }
-
-  // Destination 1: Current Active Thread (always used by inline single-comment send!)
-  if (state.threadStatus === "idle" || state.threadStatus === "unread") {
-    targets.forEach(c => {
-      c.persisted = "sent";
-      c.reply = null;
-      c.targetLabel = activeTitle;
-    });
-    state.threadStatus = "running";
-    state.chat.push({ role: "你", text: `请处理评论 (${tIds.join(", ")})：${targets[0].text}` });
-    state.statusNotice = `已发给「${activeTitle}」(${tIds.length} 条) · 状态进入「处理中」`;
-    logEvent("info", `[${activeTitle}] 接收评论 [${tIds.join(", ")}] → 处理中。`);
-  } else {
-    const useSteer = wantSteer && state.backend === "pi";
-    const lane = useSteer ? "steering" : "followUp";
-    targets.forEach(c => {
-      c.persisted = "sent";
-      c.reply = null;
-      c.targetLabel = useSteer ? `${activeTitle}·Steer` : activeTitle;
-    });
-    state.queue[lane].push({
-      id: "qc" + Date.now().toString().slice(-3),
-      text: `评论 (${tIds.join(", ")})：${targets[0].text}`,
-      refs: tIds,
-      commentIds: tIds
-    });
-    state.statusNotice = useSteer
-      ? `评论 (${tIds.join(", ")}) 已作为紧急插话排入「${activeTitle}」(+1)`
-      : `评论 (${tIds.join(", ")}) 已排入「${activeTitle}」后续队列 (+1)`;
-    logEvent("info", `评论入队 [${activeTitle} / ${lane}] → 已排队。`);
-  }
+  const delivery = deliverCommentsToThread(currentThread(), targets, wantSteer);
+  state.statusNotice = delivery.immediate
+    ? `已立即发给「${activeTitle}」(${tIds.length} 条)`
+    : `评论 (${tIds.join(", ")}) 已排入「${activeTitle}」${delivery.lane === "steering" ? "插话" : "后续"}队列`;
   render();
 }
 
@@ -1621,37 +1690,18 @@ function handleCommentAction(id, action) {
   const view = deriveCommentView(c);
   if (!view.actions.includes(action)) return;
 
-  if (action === "send") {
-    // Crucial Fix: Inline single-comment send ALWAYS targets the active Thread, never leaking batch target!
-    dispatchComments([c.id], false, "current");
-  } else if (action === "edit") {
-    openCommentCreator(false, c.id);
-  } else if (action === "dismiss") {
+  if (action === "dismiss") {
     c.persisted = "dismissed";
-    state.statusNotice = `已忽略草稿评论 ${c.id}`;
+    state.dockIdx = Math.max(0, Math.min(state.dockIdx, filteredComments().length - 1));
+    state.shelfIdx = Math.max(0, Math.min(state.shelfIdx, filteredComments().length - 1));
+    state.statusNotice = `已清理评论 ${c.id}（代码下划线已移除）`;
   } else if (action === "restore") {
     c.persisted = "draft";
     state.statusNotice = `已将 ${c.id} 恢复为草稿`;
-  } else if (action === "withdraw") {
-    ["steering", "followUp"].forEach(lane => {
-      const idx = state.queue[lane].findIndex(q => (q.commentIds || []).includes(c.id));
-      if (idx >= 0) withdrawQueueItem(lane, idx);
-    });
   } else if (action === "view_thread") {
-    state.dockOpen = true;
-    state.dockTab = "chat";
-    state.focusedPane = "dock";
-    state.statusNotice = `正在查看处理 ${c.id} 的会话进度（可在调试抽屉点「模拟 Agent 回复」观察转为待确认）`;
-  } else if (action === "resolve") {
-    c.persisted = "resolved";
-    state.statusNotice = `已确认并解决评论 ${c.id}`;
-  } else if (action === "followup") {
-    c.persisted = "draft";
-    openCommentCreator(false, c.id);
-  } else if (action === "reopen") {
-    c.persisted = "sent"; // Keeps existing reply so user can re-verify or follow up, preserving history!
-    if (!c.reply) c.persisted = "draft";
-    state.statusNotice = `已重开评论 ${c.id}（完整保留原有回复历史）`;
+    if (c.targetThreadId) currentWsData().activeThreadId = c.targetThreadId;
+    openActiveThread();
+    state.statusNotice = `正在查看处理 ${c.id} 的 Thread 进度`;
   }
   render();
 }
@@ -1667,7 +1717,7 @@ function simulateAgentReplyComments() {
   if (count === 0) {
     state.statusNotice = "当前没有处于「处理中」的评论（请先发送一条草稿评论）";
   } else {
-    state.statusNotice = `Agent 已回复 ${count} 条评论 → 状态由「处理中」推进为「待确认」，现在可执行「解决」或「继续追问」`;
+    state.statusNotice = `Agent 已回复 ${count} 条评论 → 可点击「查看 Thread」或「定位」核对代码`;
     logEvent("info", `${count} 条处理中评论收到关联回复 → 转为「待确认」。`);
   }
   render();
@@ -1683,6 +1733,7 @@ function rollbackQueuedItemsToDraft(items) {
       if (c) {
         c.persisted = "draft";
         c.targetLabel = null;
+        c.targetThreadId = null;
         rolledCommentIds.push(cid);
       }
     });
@@ -1776,8 +1827,10 @@ function toggleLeftNav() {
 
 function toggleDock() {
   state.dockOpen = !state.dockOpen;
-  if (!state.dockOpen && state.focusedPane === "dock") state.focusedPane = "code";
-  state.statusNotice = state.dockOpen ? "已展开右侧 Agent Dock" : "已隐藏 Agent Dock（后台任务继续运行）";
+  state.dockTab = "review";
+  if (state.dockOpen) state.focusedPane = "dock";
+  else if (state.focusedPane === "dock") state.focusedPane = state.centerMode === "thread" ? "thread" : "code";
+  state.statusNotice = state.dockOpen ? "已展开并聚焦评论侧栏（j/k 移动，Space 勾选，s 发送，CR 定位，v 看Thread）" : "已隐藏评论侧栏（按 Space a a 或点击顶部「评论」重新展开）";
   render();
 }
 
@@ -1791,7 +1844,7 @@ function toggleShelf(tab) {
     state.focusedPane = "shelf";
   } else {
     state.shelfOpen = !state.shelfOpen;
-    if (!state.shelfOpen && state.focusedPane === "shelf") state.focusedPane = "code";
+    if (!state.shelfOpen && state.focusedPane === "shelf") state.focusedPane = state.centerMode === "thread" ? "thread" : "code";
   }
   render();
 }
@@ -1811,11 +1864,11 @@ function applyWorkspaceChoice(wsId, inNewTab) {
   if (inNewTab) {
     state.tabs.push({ id: state.tabs.length + 1, wsId, isUserNative: false });
     state.activeTabIdx = state.tabs.length - 1;
-    state.statusNotice = `已在新 Tabpage 打开工作区 ${WORKSPACES[wsId].name}（展示其独立评论与会话）`;
+    state.statusNotice = `已在新 Tabpage 打开工作区 ${WORKSPACES[wsId].name}（展示其独立评论与 Thread）`;
   } else {
     if (state.tabs[state.activeTabIdx].isUserNative) state.activeTabIdx = 0;
     state.tabs[state.activeTabIdx].wsId = wsId;
-    state.statusNotice = `已切换至工作区 ${WORKSPACES[wsId].name} · 当前会话：${currentThread().title}（原工作区后台继续运行）`;
+    state.statusNotice = `已切换至工作区 ${WORKSPACES[wsId].name} · 当前 Thread：${currentThread().title}（原工作区后台继续运行）`;
   }
   state.shelfIdx = 0;
   state.dockIdx = 0;
@@ -1923,7 +1976,7 @@ function cycleThreadState() {
 
 function toggleRunningDefaultPref() {
   state.runningEnterPref = state.runningEnterPref === "followUp" ? "steer" : "followUp";
-  state.statusNotice = `用户偏好已更新：Chat 运行中回车默认 = ${state.runningEnterPref === "followUp" ? "Follow-up（后续排队）" : "Steer（下一步插话）"}`;
+  state.statusNotice = `用户偏好已更新：Thread 运行中回车默认 = ${state.runningEnterPref === "followUp" ? "Follow-up（后续排队）" : "Steer（下一步插话）"}`;
   render();
 }
 
@@ -1938,6 +1991,7 @@ function toggleBackend() {
 
 function previewCommentLocation(c) {
   if (!c) return;
+  if (state.centerMode === "thread") state.centerMode = c.side === "base" ? "diff" : "code";
   if (c.side === "base" && state.centerMode !== "diff") {
     enterDiffReview();
   }
@@ -1976,25 +2030,20 @@ function jumpToCode(file, line) {
 }
 
 /* ==================== RENDERING ==================== */
-function esc(s) {
-  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+function openCurrentLineCommentThread() {
+  const currentSide = state.centerMode === "diff" ? state.diffSide : "modified";
+  const lnum = activeCursorLine();
+  const c = filteredComments().find(x => x.side === currentSide && x.line === lnum && x.targetThreadId);
+  if (!c) {
+    state.statusNotice = "当前行没有已关联 Thread 的评论";
+    renderStatusAndCmd();
+    return;
+  }
+  handleCommentAction(c.id, "view_thread");
 }
 
-function renderActionButtons(c) {
-  const v = deriveCommentView(c);
-  const activeTitle = currentThread().title;
-  const map = {
-    send: `<button class="btn btn-xs btn-primary" title="发给：${esc(activeTitle)}" onclick="event.stopPropagation(); handleCommentAction('${c.id}','send')">发给当前会话</button>`,
-    edit: `<button class="btn btn-xs" onclick="event.stopPropagation(); handleCommentAction('${c.id}','edit')">编辑</button>`,
-    dismiss: `<button class="btn btn-xs btn-quiet" onclick="event.stopPropagation(); handleCommentAction('${c.id}','dismiss')">忽略</button>`,
-    restore: `<button class="btn btn-xs" onclick="event.stopPropagation(); handleCommentAction('${c.id}','restore')">恢复草稿</button>`,
-    withdraw: `<button class="btn btn-xs" onclick="event.stopPropagation(); handleCommentAction('${c.id}','withdraw')">撤回编辑</button>`,
-    view_thread: `<button class="btn btn-xs" onclick="event.stopPropagation(); handleCommentAction('${c.id}','view_thread')">查看会话</button>`,
-    resolve: `<button class="btn btn-xs btn-primary" onclick="event.stopPropagation(); handleCommentAction('${c.id}','resolve')">解决</button>`,
-    followup: `<button class="btn btn-xs" onclick="event.stopPropagation(); handleCommentAction('${c.id}','followup')">继续修改</button>`,
-    reopen: `<button class="btn btn-xs" onclick="event.stopPropagation(); handleCommentAction('${c.id}','reopen')">重开</button>`
-  };
-  return v.actions.map(a => map[a] || "").join("");
+function esc(s) {
+  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
 function render() {
@@ -2006,7 +2055,6 @@ function render() {
   renderShelf();
   renderStatusAndCmd();
   renderOverlay();
-  renderDebug();
 }
 
 function renderTabline() {
@@ -2017,18 +2065,12 @@ function renderTabline() {
   }).join("");
 
   const statusTag = (state.threadStatus === "needs_input" || state.pendingQuestion)
-    ? `<span class="tag tag-gold" style="cursor:pointer;" onclick="openQuestionFloat()" title="按 Space a r 或点击打开回答">● 等待回答 (Space ar)</span>`
-    : state.threadStatus === "running"
-      ? `<span class="tag tag-foam">● 运行中</span>`
-      : state.threadStatus === "unread"
-        ? `<span class="tag tag-rose">● 完成未读</span>`
-        : `<span class="tag tag-dim">○ 空闲</span>`;
+    ? `<span class="tag tag-gold" style="cursor:pointer;" onclick="openQuestionFloat()" title="按 Space a r 或点击打开回答">● 等待回答</span>`
+    : "";
 
   document.getElementById("tuiTabRight").innerHTML = state.tabs[state.activeTabIdx].isUserNative
-    ? `<span>用户自有 Tabpage（pide 不接管）</span>`
-    : `<span>工作区: <b style="color:var(--text); cursor:pointer;" onclick="openWorkspacePicker()">${esc(ws.name)} ▾</b></span>
-       <span>${esc(ws.planStep)}</span>
-       ${statusTag}`;
+    ? ""
+    : `<span><b style="color:var(--text); cursor:pointer;" onclick="openWorkspacePicker()">${esc(ws.name)} ▾</b></span>${statusTag}`;
 }
 
 function renderMiddle() {
@@ -2039,9 +2081,10 @@ function renderMiddle() {
     mid.innerHTML = `
       <div class="tui-win focused" style="flex:1;">
         <div class="tui-winbar"><span>~/notes/architecture-notes.md</span><span>用户独立 Tabpage</span></div>
-        <div class="tui-win-body" style="padding:14px 18px; font-family:var(--sans);">
-          <p style="margin-top:0;"><b>Workspace 与 Tabpage 解耦：</b>默认在当前 Tab 原地切换工作区，只有显式按 <kbd>t</kbd> 才新建 Tabpage。</p>
-          <button class="btn btn-xs" onclick="state.activeTabIdx=0; render();">返回 Tab 1</button>
+        <div class="tui-win-body" style="padding:12px 16px;">
+          <div style="color:var(--iris); font-weight:700;"># Architecture Notes</div>
+          <div style="color:var(--subtle); margin-top:6px;">Workspace 与 Tabpage 解耦：默认原地切换工作区，仅显式按 t 时新建 Tabpage。</div>
+          <div style="color:var(--muted); margin-top:10px;"><span class="wb-seg accent" onclick="state.activeTabIdx=0; render();">gt 切回 Tab 1</span></div>
         </div>
       </div>
     `;
@@ -2053,6 +2096,7 @@ function renderMiddle() {
 
   if (state.centerMode === "code") html += renderCodePane();
   else if (state.centerMode === "diff") html += renderDiffPanes();
+  else if (state.centerMode === "thread") html += renderThreadPane();
   else if (state.centerMode === "tree") html += renderTreePane();
   else if (state.centerMode === "merge") html += renderMergePane();
 
@@ -2064,8 +2108,8 @@ function renderLeftNav() {
   const wsData = currentWsData();
   const navItems = {
     workspaces: [
-      { title: "feat/auth", sub: (state.tabs[state.activeTabIdx]?.wsId || "auth") === "auth" ? "当前 · 已验证 ✓" : "后台存活", wsId: "auth" },
-      { title: "fix/retry-backoff", sub: (state.tabs[state.activeTabIdx]?.wsId || "auth") === "retry" ? "当前 · 待验证" : "待验证", wsId: "retry" }
+      { title: "feat/auth", sub: (state.tabs[state.activeTabIdx]?.wsId || "auth") === "auth" ? "当前" : "后台存活", wsId: "auth" },
+      { title: "fix/retry-backoff", sub: (state.tabs[state.activeTabIdx]?.wsId || "auth") === "retry" ? "当前" : "后台存活", wsId: "retry" }
     ],
     threads: wsData.threads.map(th => ({
       title: th.title,
@@ -2087,10 +2131,9 @@ function renderLeftNav() {
     <div class="tui-win win-nav ${state.focusedPane === "nav" ? "focused" : ""}" onclick="state.focusedPane='nav'; render();">
       <div class="tui-winbar">
         <span>导航 · ${esc(state.leftNavKind)}</span>
-        <span><kbd>j</kbd><kbd>k</kbd> <kbd>q</kbd></span>
       </div>
       <div style="display:flex; border-bottom:1px solid var(--hl-med); font-family:var(--sans); font-size:11px;">
-        ${[["workspaces","工作区"],["threads","会话"],["specs","Spec"],["artifacts","产物"]].map(([k, lbl]) => `
+        ${[["workspaces","工作区"],["threads","Thread"],["specs","Spec"],["artifacts","产物"]].map(([k, lbl]) => `
           <div style="flex:1; text-align:center; padding:4px 2px; cursor:pointer; color:${state.leftNavKind===k?"var(--rose)":"var(--muted)"};"
                onclick="event.stopPropagation(); state.leftNavKind='${k}'; state.leftNavIdx=0; render();">${lbl}</div>
         `).join("")}
@@ -2116,9 +2159,8 @@ function renderBufferLines(linesArr, side, activeLine, isPaneFocused) {
     const lnum = i + 1;
     const isCur = lnum === activeLine;
     const isVis = showVis && lnum >= selS && lnum <= selE;
-    const lineComments = state.comments.filter(c => c.side === side && c.line === lnum && c.persisted !== "dismissed");
-    const hasOutdated = lineComments.some(c => c.anchor === "outdated" && c.persisted !== "resolved");
-    const allResolved = lineComments.length > 0 && lineComments.every(c => c.persisted === "resolved");
+    const lineComments = filteredComments().filter(c => c.side === side && c.line === lnum && c.persisted !== "dismissed");
+    const hasOutdated = lineComments.some(c => c.anchor === "outdated");
 
     let signHtml = "";
     if (state.centerMode === "diff") {
@@ -2127,7 +2169,6 @@ function renderBufferLines(linesArr, side, activeLine, isPaneFocused) {
     }
     if (lineComments.length > 0) {
       if (hasOutdated) signHtml = `<span style="color:var(--gold);">!</span>`;
-      else if (allResolved) signHtml = `<span style="color:var(--pine);">✓</span>`;
       else signHtml = `<span style="color:var(--iris);">●</span>`;
     }
 
@@ -2139,47 +2180,31 @@ function renderBufferLines(linesArr, side, activeLine, isPaneFocused) {
 
     let eolSummary = "";
     let expandedCard = "";
-    const isLinkedCommentPaneActive =
-      (state.focusedPane === "shelf" && state.shelfTab === "comments") ||
-      (state.focusedPane === "dock" && state.dockTab === "review");
-    const expandHere = isCur && (isPaneFocused || (isLinkedCommentPaneActive && state.diffSide === side));
     if (lineComments.length > 0) {
-      if (expandHere) {
-        expandedCard = lineComments.map(c => {
-          const v = deriveCommentView(c);
-          const outdatedNote = c.anchor === "outdated"
-            ? `<div style="color:var(--gold); font-size:11px; margin-top:2px;">⚠ 原文已变，快照：<code class="mono">${esc(c.quote)}</code></div>`
-            : "";
-          const replyNote = c.reply
-            ? `<div style="color:var(--foam); font-size:11.5px; margin-top:3px;">↳ 回复：${esc(c.reply)}</div>`
-            : "";
-          return `
-            <div class="inline-card ${c.anchor === "outdated" ? "outdated" : ""} ${v.key === "resolved" ? "resolved" : ""}" onclick="event.stopPropagation()">
-              <div>
-                <span class="tag ${v.tagCls}">${v.label}</span>
-                ${c.targetLabel ? `<span class="tag tag-dim" style="margin-left:4px;">→ ${esc(c.targetLabel)}</span>` : ""}
-                <span style="margin-left:6px;">${esc(c.text)}</span>
-                ${outdatedNote}
-                ${replyNote}
-              </div>
-              <div style="display:flex; gap:4px; flex-shrink:0;">${renderActionButtons(c)}</div>
-            </div>
-          `;
-        }).join("");
-      } else {
-        const v0 = deriveCommentView(lineComments[0]);
-        const outdatedCnt = lineComments.filter(c => c.anchor === "outdated" && c.persisted !== "resolved").length;
-        const summaryText = lineComments.length === 1 ? `${v0.label}: ${lineComments[0].text}` : `${lineComments.length} 条评论`;
-        eolSummary = `<span class="virt-eol ${outdatedCnt ? "warn" : ""}">● ${esc(summaryText)}${outdatedCnt ? " · 原文已变" : ""}</span>`;
-      }
+      expandedCard = lineComments.map(c => {
+        const v = deriveCommentView(c);
+        const outdatedNote = c.anchor === "outdated"
+          ? `<div style="margin-top:1px;">  ⚠ 原文已变，快照：${esc(c.quote)}</div>`
+          : "";
+        const replyNote = c.reply
+          ? `<div style="color:var(--foam); margin-top:1px;">  ↳ 回复：${esc(c.reply)}</div>`
+          : "";
+        return `
+          <div class="virt-lines ${c.anchor === "outdated" ? "outdated" : ""}">
+            <div>↳ [${esc(v.label)}]${c.targetLabel ? ` → ${esc(c.targetLabel)}` : ""}  ${esc(c.text)}</div>
+            ${outdatedNote}
+            ${replyNote}
+          </div>
+        `;
+      }).join("");
     }
 
     return `
-      <div class="cline ${diffCls} ${isCur ? (isPaneFocused ? "focused-cursor" : "cursor") : ""} ${isVis ? "visual" : ""}"
+      <div class="cline ${lineComments.length > 0 ? "has-comment" : ""} ${hasOutdated ? "outdated-anchor" : ""} ${diffCls} ${isCur ? (isPaneFocused ? "focused-cursor" : "cursor") : ""} ${isVis ? "visual" : ""}"
            onclick="event.stopPropagation(); state.focusedPane='code'; state.diffSide='${side}'; setActiveCursorLine(${lnum}); render();">
         <span class="csign">${signHtml}</span>
         <span class="clnum">${lnum}</span>
-        <span class="ctext">${esc(line) || " "}${eolSummary}</span>
+        <span class="ctext"><span class="code-text">${esc(line) || " "}</span>${eolSummary}</span>
       </div>
       ${expandedCard}
     `;
@@ -2188,21 +2213,14 @@ function renderBufferLines(linesArr, side, activeLine, isPaneFocused) {
 
 function renderCodePane() {
   const ws = currentWs();
-  const [selS, selE] = getSelectionRange();
-  const hasVis = state.visualAnchor !== null;
-
-  const bar = hasVis
-    ? `<span>已选 L${selS}–${selE}：<kbd>Space</kbd><kbd>as</kbd> 后续排队 · <kbd>Space</kbd><kbd>aS</kbd> 插话 · <kbd>Space</kbd><kbd>ac</kbd> 留评论</span>
-       <span style="display:flex; gap:4px;">
-         <button class="btn btn-xs btn-primary" onclick="event.stopPropagation(); sendFromCode(false)">排队发送 (Space as)</button>
-         <button class="btn btn-xs" onclick="event.stopPropagation(); openCommentCreator(false)">留评论 (Space ac)</button>
-       </span>`
-    : `<span>${esc(ws.file)} ${state.bufferModified ? `<span class="tag tag-love">[+] 未保存</span>` : ""}</span>
-       <span><kbd>v</kbd> 选区 · <kbd>Space</kbd><kbd>ac</kbd> 评论 · <kbd>Space</kbd><kbd>as</kbd> 发送 · <kbd>Space</kbd><kbd>ad</kbd> Diff</span>`;
+  const commentCnt = filteredComments().length;
+  const rightActions = !state.dockOpen
+    ? `<span class="wb-seg accent" onclick="event.stopPropagation(); toggleDock()" title="Space a a 打开右侧评论列表">展开评论列表 (${commentCnt})</span>`
+    : "";
 
   return `
     <div class="tui-win ${state.focusedPane === "code" ? "focused" : ""}" style="flex:1;" onclick="state.focusedPane='code'; render();">
-      <div class="tui-winbar">${bar}</div>
+      <div class="tui-winbar"><span>${esc(ws.file)}${state.bufferModified ? " [+]" : ""}</span>${rightActions}</div>
       <div class="tui-win-body">${renderBufferLines(state.codeLines, "modified", state.cursorLine, state.focusedPane === "code")}</div>
     </div>
   `;
@@ -2222,12 +2240,12 @@ function renderDiffPanes() {
       <div class="tui-win ${state.focusedPane === "code" ? "focused" : ""}" style="flex:1;"
            onclick="state.focusedPane='code'; render();">
         <div class="tui-winbar">
-          <span style="display:flex; align-items:center; gap:6px;">
-            <span>单栏 Diff · ${esc(ws.file)}</span>
-            <button class="btn btn-xs ${showingBase ? "active" : ""}" onclick="event.stopPropagation(); state.diffSide='base'; render();">Base 旧侧</button>
-            <button class="btn btn-xs ${!showingBase ? "active" : ""}" onclick="event.stopPropagation(); state.diffSide='modified'; render();">Modified 新侧</button>
+          <span>单栏 Diff · ${esc(ws.file)}</span>
+          <span>
+            <span class="wb-seg ${showingBase ? "active" : ""}" onclick="event.stopPropagation(); state.diffSide='base'; render();">Base 旧侧</span>
+            <span class="wb-sep">│</span>
+            <span class="wb-seg ${!showingBase ? "active" : ""}" onclick="event.stopPropagation(); state.diffSide='modified'; render();">Modified 新侧</span>
           </span>
-          <span><kbd>Space</kbd><kbd>ab</kbd> 切新旧侧 · <kbd>Space</kbd><kbd>ac</kbd> 评论 · <kbd>Space</kbd><kbd>ad</kbd> 退出</span>
         </div>
         <div class="tui-win-body">${renderBufferLines(activeLines, state.diffSide, activeCur, state.focusedPane === "code")}</div>
       </div>
@@ -2239,7 +2257,6 @@ function renderDiffPanes() {
          onclick="state.focusedPane='code'; state.diffSide='base'; render();">
       <div class="tui-winbar">
         <span>Base (HEAD~1) · ${esc(ws.file)}</span>
-        <span>可定位与留旧侧评论 (<kbd>Space</kbd><kbd>ac</kbd>)</span>
       </div>
       <div class="tui-win-body">${renderBufferLines(state.baseLines, "base", state.baseCursorLine, baseFocused)}</div>
     </div>
@@ -2247,7 +2264,6 @@ function renderDiffPanes() {
          onclick="state.focusedPane='code'; state.diffSide='modified'; render();">
       <div class="tui-winbar">
         <span>Modified (Worktree) · ${esc(ws.file)}</span>
-        <span><kbd>Ctrl+h/l</kbd> 切新旧侧 · <kbd>Space</kbd><kbd>ac</kbd> 评论 · <kbd>Space</kbd><kbd>ad</kbd> 退出</span>
       </div>
       <div class="tui-win-body">${renderBufferLines(state.codeLines, "modified", state.cursorLine, modFocused)}</div>
     </div>
@@ -2259,28 +2275,31 @@ function renderTreePane() {
   return `
     <div class="tui-win ${state.focusedPane === "code" ? "focused" : ""}" style="flex:1;" onclick="state.focusedPane='code'; render();">
       <div class="tui-winbar">
-        <span>Thread Tree（插件只读 Buffer）</span>
-        <span><kbd>j</kbd><kbd>k</kbd> 移动 · <kbd>p</kbd> 预览 · <kbd>s</kbd> 干净子代理 · <kbd>f</kbd> 分叉 · <kbd>m</kbd> 合并 · <kbd>q</kbd> 返回</span>
+        <span>pide://tree/${esc(currentThread().id)}</span>
+        <span>
+          <span class="wb-seg" onclick="event.stopPropagation(); state.treePreviewOpen=!state.treePreviewOpen; render();">p 预览</span>
+          <span class="wb-sep">·</span>
+          <span class="wb-seg accent" onclick="event.stopPropagation(); spawnSubagentFromTree(true)">s 子代理</span>
+          <span class="wb-sep">·</span>
+          <span class="wb-seg" onclick="event.stopPropagation(); spawnSubagentFromTree(false)">f Fork</span>
+          <span class="wb-sep">·</span>
+          <span class="wb-seg" onclick="event.stopPropagation(); openMergeView()">m Merge</span>
+          <span class="wb-sep">·</span>
+          <span class="wb-seg" onclick="event.stopPropagation(); popCenterView()">q 返回</span>
+        </span>
       </div>
       <div class="tui-win-body" style="padding:8px 12px;">
         ${state.treeNodes.map((n, i) => `
           <div class="vlist-row ${state.treeIdx === i ? "selected" : ""}" style="padding-left:${12 + n.depth * 22}px;"
                onclick="event.stopPropagation(); state.treeIdx=${i}; render();">
             <span>${n.depth ? "└─ " : ""}${esc(n.title)}</span>
-            <span class="tag ${n.tag.includes("当前") ? "tag-foam" : "tag-dim"}">${esc(n.tag)}</span>
+            <span style="color:${n.tag.includes("当前") ? "var(--foam)" : "var(--muted)"};">[${esc(n.tag)}]</span>
           </div>
         `).join("")}
         ${state.treePreviewOpen ? `
-          <div style="margin:12px 6px 0; padding:10px 12px; border-radius:6px; background:var(--surface); border:1px solid var(--hl-med); font-family:var(--sans);">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-              <b>节点预览：${esc(curNode.title)}</b>
-              <div style="display:flex; gap:5px;">
-                <button class="btn btn-xs btn-primary" onclick="spawnSubagentFromTree(true)">派发子代理（默认干净上下文 s）</button>
-                <button class="btn btn-xs" onclick="spawnSubagentFromTree(false)">分叉新会话 (f)</button>
-                <button class="btn btn-xs btn-rose" onclick="openMergeView()">进入三步合并 (m)</button>
-              </div>
-            </div>
-            <div style="color:var(--subtle); font-size:12px;">${esc(curNode.summary)}</div>
+          <div style="margin:10px 6px 0; padding:8px 10px; border-top:1px solid var(--hl-med);">
+            <div class="md-h2">## 节点预览 · ${esc(curNode.title)}</div>
+            <div style="color:var(--subtle);">${esc(curNode.summary)}</div>
           </div>
         ` : ""}
       </div>
@@ -2291,8 +2310,8 @@ function renderTreePane() {
 function spawnSubagentFromTree(fresh) {
   const curNode = state.treeNodes[state.treeIdx];
   state.statusNotice = fresh
-    ? "已派发子代理（默认干净上下文 + 最小任务包），源会话不变"
-    : `已从「${curNode.title}」分叉独立新会话，源历史不变`;
+    ? "已派发子代理（默认干净上下文 + 最小任务包），源 Thread 不变"
+    : `已从「${curNode.title}」分叉独立新 Thread，源历史不变`;
   render();
 }
 
@@ -2307,38 +2326,53 @@ function advanceMergeFromStep1() {
   render();
 }
 
+function mergeSourceLineage(src) {
+  if (src.lineage) return src.lineage;
+  const thread = currentWsData().threads.find(t => t.id === src.threadId);
+  return thread?.entryLineage || [];
+}
+
+function commonMergePrefix(sources) {
+  if (!sources.length) return [];
+  const first = mergeSourceLineage(sources[0]);
+  return first.filter((key, i) => sources.every(src => mergeSourceLineage(src)[i] === key));
+}
+
 function renderMergePane() {
-  const prevView = state.viewStack[state.viewStack.length - 1]?.centerMode || "code";
   const checkedCnt = state.mergeSources.filter(s => s.checked).length;
+  const checkedSources = state.mergeSources.filter(s => s.checked);
+  const commonPrefix = commonMergePrefix(checkedSources);
   return `
     <div class="tui-win ${state.focusedPane === "code" ? "focused" : ""}" style="flex:1;" onclick="state.focusedPane='code'; render();">
       <div class="tui-winbar">
-        <span>三步合并视图 · Step ${state.mergeStep}/3（已选 ${checkedCnt} 个来源）</span>
-        <span><kbd>j</kbd><kbd>k</kbd> · <kbd>Space</kbd> 勾选 · <kbd>Enter</kbd> 下一步 · <kbd>q</kbd> 返回 ${esc(prevView)}</span>
+        <span>pide://merge · ${[[1,"[1 选择来源]"],[2,"[2 核对结论]"],[3,"[3 摘要创建]"]].map(([s, lbl]) =>
+          `<span class="wb-seg ${state.mergeStep === s ? "active" : ""}" onclick="event.stopPropagation(); if(${s}>1 && state.mergeSources.filter(x=>x.checked).length===0){state.statusNotice='请至少勾选 1 个要汇总的结论来源'; render();} else {state.mergeStep=${s}; render();}">${lbl}</span>`
+        ).join(" ")}</span>
+        <span>
+          ${state.mergeStep === 3 ? `<span class="wb-seg" onclick="event.stopPropagation(); openMergeScratch()">e 编辑摘要</span><span class="wb-sep">·</span>` : ""}
+          <span class="wb-seg accent" style="${checkedCnt === 0 ? "opacity:0.45;" : ""}" onclick="event.stopPropagation(); ${state.mergeStep === 1 ? "advanceMergeFromStep1()" : state.mergeStep === 2 ? "state.mergeStep=3; render();" : "finishMerge()"}">CR ${state.mergeStep < 3 ? "下一步" : `创建 (${checkedCnt})`}</span>
+          <span class="wb-sep">·</span>
+          <span class="wb-seg" onclick="event.stopPropagation(); popCenterView()">q 返回</span>
+        </span>
       </div>
-      <div class="tui-win-body" style="padding:10px 14px; font-family:var(--sans);">
-        <div style="display:flex; gap:6px; margin-bottom:10px;">
-          ${[[1,"1. 选择来源"],[2,"2. 核对结论与冲突"],[3,"3. 编辑摘要并创建"]].map(([s, lbl]) => `
-            <button class="btn btn-xs ${state.mergeStep === s ? "active" : ""}" onclick="if(${s}>1 && state.mergeSources.filter(x=>x.checked).length===0){state.statusNotice='请至少勾选 1 个要汇总的结论来源'; render();} else {state.mergeStep=${s}; render();}">${lbl}</button>
-          `).join("")}
-        </div>
+      <div class="tui-win-body" style="padding:10px 14px;">
         ${state.mergeStep === 1 ? state.mergeSources.map((src, i) => `
           <div class="vlist-row ${state.mergeIdx === i ? "selected" : ""}" onclick="state.mergeIdx=${i}; state.mergeSources[${i}].checked=!state.mergeSources[${i}].checked; render();">
             <span>[${src.checked ? "x" : " "}] <b>${esc(src.name)}</b> — <span style="color:var(--subtle);">${esc(src.note)}</span></span>
           </div>
-        `).join("") + `<div style="margin-top:10px;"><button class="btn btn-xs btn-primary" style="${checkedCnt === 0 ? "opacity:0.45;" : ""}" onclick="advanceMergeFromStep1()">下一步：核对已选 (${checkedCnt}) →</button></div>`
+        `).join("")
         : state.mergeStep === 2 ? `
-          <div style="padding:10px; background:var(--surface); border-radius:6px; border:1px solid var(--hl-med); margin-bottom:10px;">
-            <div><b>已选结论 (${checkedCnt} 项)：</b>${esc(state.mergeSources.filter(s => s.checked).map(s => s.name).join(" + "))}</div>
-            <div style="color:var(--subtle); margin-top:4px;"><b>汇总方式：</b>提炼结构化结论与证据链接开启新会话，不自动合并 Git 代码，也不修改源会话历史。</div>
+          <div style="padding:6px 4px; line-height:1.7;">
+            <div style="color:${commonPrefix.length ? "var(--foam)" : "var(--gold)"};">
+              ${commonPrefix.length
+                ? `## 公共前缀：${esc(commonPrefix.join(" → "))}（只继承一次，仅合并分叉后缀）`
+                : `## 无真实公共祖先：使用 handoff merge，不伪造共享历史`}
+            </div>
+            <div style="margin-top:6px;">已选来源 (${checkedCnt})：${esc(state.mergeSources.filter(s => s.checked).map(s => s.name).join(" + "))}</div>
+            <div style="color:var(--subtle); margin-top:4px;">提炼结构化结论与证据链接开启新 Thread，源 Thread 历史保持只读不变。</div>
           </div>
-          <button class="btn btn-xs btn-primary" onclick="state.mergeStep=3; render();">下一步 (Enter) →</button>
         ` : `
-          <pre class="pre-diagram" style="margin-bottom:10px;">${esc(state.mergeSummary)}</pre>
-          <div style="display:flex; gap:6px;">
-            <button class="btn btn-xs" onclick="openMergeScratch()">在可编辑 Buffer 中修改摘要 (e)</button>
-            <button class="btn btn-xs btn-primary" style="${checkedCnt === 0 ? "opacity:0.45;" : ""}" onclick="finishMerge()">✓ 基于 ${checkedCnt} 个来源创建新会话 (Enter)</button>
-          </div>
+          <pre class="pre-diagram" style="background:transparent; border-color:var(--hl-med); color:var(--text);">${esc(state.mergeSummary)}</pre>
         `}
       </div>
     </div>
@@ -2352,204 +2386,199 @@ function openMergeScratch() {
 
 function finishMerge() {
   const checked = state.mergeSources.filter(s => s.checked);
+  const commonPrefix = commonMergePrefix(checked);
   if (checked.length === 0) {
-    state.statusNotice = "未勾选任何合并来源，无法创建新会话";
+    state.statusNotice = "未勾选任何合并来源，无法创建新 Thread";
     render();
     return;
   }
   const wsData = currentWsData();
   const newId = "tm" + (wsData.threads.length + 1);
-  const newTitle = `合并会话 #${wsData.threads.length + 1} · 汇总实施`;
+  const newTitle = `合并 Thread #${wsData.threads.length + 1} · 汇总实施`;
   wsData.threads.push({
     id: newId,
     title: newTitle,
+    parentId: commonPrefix.length ? commonPrefix[commonPrefix.length - 1].split(":")[0] : null,
+    parentIds: checked.map(s => s.threadId).filter(Boolean),
+    forkEntryId: commonPrefix.length ? commonPrefix[commonPrefix.length - 1].split(":").pop() : null,
+    entryLineage: [...commonPrefix, `${newId}:merge`],
+    origin: "merge",
     status: "idle",
     pendingQuestion: false,
     composerDraft: "",
     composerRefs: [],
     queue: { steering: [], followUp: [], system: [] },
-    chat: [{ role: "系统", text: `已汇总 ${checked.length} 个来源结论（${checked.map(s => s.name).join("；")}），源会话历史未改动。` }]
+    chat: [{ role: "系统", text: commonPrefix.length
+      ? `公共前缀 ${commonPrefix.join(" → ")} 只继承一次；仅合并后续结论，源 Thread 历史未改动。`
+      : `无公共祖先，已通过 handoff 汇总 ${checked.length} 个来源；源 Thread 历史未改动。` }]
   });
+  wsData.mergeSources.push({ id: `src_${newId}`, threadId: newId, checked: false, name: newTitle, note: "合并产生的 Thread" });
   wsData.activeThreadId = newId;
   state.viewStack = [];
-  state.centerMode = "code";
-  state.dockOpen = true;
-  state.dockTab = "chat";
+  state.centerMode = "thread";
+  state.dockOpen = false;
+  state.dockTab = "review";
+  state.focusedPane = "thread";
   state.statusNotice = `已创建并切换至「${newTitle}」`;
   render();
 }
 
 function renderDockPane() {
-  const visibleComments = state.comments.filter(c => c.persisted !== "dismissed");
-  const draftIds = state.comments.filter(c => c.persisted === "draft").map(c => c.id);
-  const tabs = [
-    ["chat", "Chat"],
-    ["review", `Review (${visibleComments.length})`],
-    ["plan", "Plan"],
-    ["specs", "Specs"],
-    ["resources", "后台"]
-  ];
+  const visibleComments = filteredComments();
+  const selectedDraftIds = state.comments.filter(c => c.selected && c.persisted === "draft").map(c => c.id);
+  const dest = sendTargetById(state.commentTargetId);
+  const destName = dest.id === "current" ? currentThread().title : dest.label.split("（")[0].replace(/^Thread：/, "");
 
-  let bodyHtml = "";
-  if (state.dockTab === "review") {
-    const dest = SEND_TARGETS.find(t => t.id === state.commentTargetId) || SEND_TARGETS[0];
-    bodyHtml = `
-      <div class="tui-win-body">
-        <div style="padding:6px 10px; color:var(--subtle); font-family:var(--sans); font-size:11.5px; border-bottom:1px solid var(--hl-med); display:flex; justify-content:space-between; align-items:center;">
-          <span><kbd>j</kbd><kbd>k</kbd> · <kbd>Enter</kbd> 跳回对应侧 · <kbd>r</kbd> 解决/撤回</span>
-          <span style="cursor:pointer; color:var(--foam);" onclick="event.stopPropagation(); openTargetPicker()">目标: ${esc(dest.label.split("（")[0])} ▾</span>
-        </div>
-        ${visibleComments.map((c, idx) => {
-          const v = deriveCommentView(c);
-          const sideTag = c.side === "base" ? "Base" : "Mod";
-          return `
-            <div class="vlist-row ${state.dockIdx === idx ? "selected" : ""}"
-                 onclick="event.stopPropagation(); state.focusedPane='dock'; state.dockIdx=${idx}; previewCommentById('${c.id}'); render();">
-              <div style="min-width:0;">
-                <div>
-                  <span class="tag ${v.tagCls}">${v.label}</span>
-                  <code class="mono" style="margin-left:4px;">${sideTag}:L${c.line}</code>
-                  ${c.anchor === "outdated" ? `<span class="tag tag-gold">原文已变</span>` : ""}
-                </div>
-                <div style="color:var(--subtle); margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${esc(c.text)}</div>
-              </div>
-              <div style="display:flex; gap:4px; flex-shrink:0;">
-                <button class="btn btn-xs btn-quiet" onclick="event.stopPropagation(); jumpToCommentById('${c.id}')" title="跳转光标到代码侧 (Enter)">定位</button>
-                ${renderActionButtons(c)}
-              </div>
-            </div>
-          `;
-        }).join("")}
-        ${draftIds.length > 0 ? `<div style="padding:8px 10px;"><button class="btn btn-xs btn-primary" onclick="event.stopPropagation(); dispatchComments(${JSON.stringify(draftIds).replace(/"/g, "'")}, false)">发送草稿 (${draftIds.length}) → ${esc(dest.label.split("（")[0])}</button></div>` : ""}
-      </div>
-    `;
-  } else if (state.dockTab === "plan") {
-    bodyHtml = `
-      <div class="tui-win-body" style="padding:8px 10px; font-family:var(--sans);">
-        <div class="vlist-row"><span>✓ 1. 提取 Bearer 令牌格式校验</span><span class="tag tag-pine">已验证</span></div>
-        <div class="vlist-row selected"><span>● 2. 校验 exp 与 30s 时钟偏移容差</span><span class="tag tag-foam">进行中</span></div>
-        <div class="vlist-row"><span>○ 3. 补齐过期与篡改签名回归用例</span><span class="tag tag-dim">待执行</span></div>
-      </div>
-    `;
-  } else if (state.dockTab === "specs") {
-    bodyHtml = `
-      <div class="tui-win-body" style="padding:8px 10px; font-family:var(--sans);">
-        <div class="vlist-row selected"><span>goal-and-requirements</span><span class="tag tag-dim">产品目标</span></div>
-        <div class="vlist-row"><span>module-auth · 鉴权契约与错误边界</span><span class="tag tag-foam">已同步</span></div>
-      </div>
-    `;
-  } else if (state.dockTab === "resources") {
-    bodyHtml = `
-      <div class="tui-win-body" style="padding:8px 10px; font-family:var(--sans);">
-        <div class="vlist-row"><span>子代理 scout · 调用点扫描</span><span class="tag tag-pine">已完成</span></div>
-        <div class="vlist-row"><span>后台命令 · make test --watch</span><span class="tag tag-foam">运行中</span></div>
-        <div style="padding:8px 10px; font-size:11.5px; color:var(--subtle);">本轮交付产物：<code>jwt-edge-cases.spec.md</code>、<code>auth-flow.mmd</code></div>
-      </div>
-    `;
-  } else {
-    // Chat Tab: Unified Follow-up default when running (Fix #5)
-    const allQueued = [
-      ...state.queue.steering.map((it, idx) => ({ ...it, lane: "steering", idx, tag: "插话" })),
-      ...state.queue.followUp.map((it, idx) => ({ ...it, lane: "followUp", idx, tag: "后续" }))
-    ];
-    const firstQ = allQueued[0];
-    const queueStripHtml = firstQ ? `
-      <div class="dock-queue-strip" onclick="event.stopPropagation()">
-        <div class="dock-queue-text">
-          <span class="tag tag-foam">${firstQ.tag}${allQueued.length > 1 ? ` +${allQueued.length - 1}` : ""}</span>
-          <span style="margin-left:4px;">${esc(firstQ.text)}</span>
-        </div>
-        <div style="display:flex; gap:3px; flex-shrink:0;">
-          <button class="btn btn-xs btn-quiet" onclick="withdrawQueueItem('${firstQ.lane}', ${firstQ.idx})">撤回</button>
-          <button class="btn btn-xs btn-quiet" onclick="toggleShelf('queue')">队列(${allQueued.length})</button>
-        </div>
-      </div>
-    ` : "";
-
-    const isRunning = state.threadStatus === "running" || state.threadStatus === "needs_input";
-    const effMode = state.backend === "acp" ? "followUp" : state.runningEnterPref;
-    const primaryLabel = !isRunning ? "Send" : (effMode === "steer" ? "Steer" : "Follow-up");
-
-    const keyHint = !isRunning
-      ? `<span style="color:var(--muted); font-size:11px;"><kbd>Enter</kbd> 发送 · <kbd>Esc</kbd> 回代码</span>`
-      : state.backend === "acp"
-        ? `<span style="color:var(--muted); font-size:11px;"><kbd>Enter</kbd> 后续排队</span>`
-        : `<span style="color:var(--muted); font-size:11px;"><kbd>Enter</kbd> ${effMode === "followUp" ? "后续排队" : "插话"} · <kbd>Alt+Enter</kbd> ${effMode === "followUp" ? "插话" : "后续排队"}</span>`;
-
-    const menuHtml = state.composerMenuOpen ? `
-      <div class="menu-pop" onclick="event.stopPropagation()">
-        ${isRunning && state.backend === "pi" ? `<button onclick="submitComposer('steer')">↳ 本条作为下一步插话发送 (Steer)</button>` : ""}
-        ${isRunning && state.backend === "pi" ? `<button onclick="submitComposer('interrupt')">⚡ 立即打断并改做 (Interrupt)</button>` : ""}
-        ${state.backend === "pi" ? `<button onclick="runCompact()">🗜 压缩上下文 (Compact)</button>` : ""}
-        <button onclick="state.composerMenuOpen=false; openModelFloat();">⚙ 切换模型 (${esc(MODELS[state.activeModelIdx].id)})</button>
-        <button onclick="state.composerMenuOpen=false; openThreadTree();">🌿 分支树与合并视图</button>
-      </div>
-    ` : "";
-
-    const wsData = currentWsData();
-    const activeTh = currentThread();
-    const threadBarHtml = `
-      <div style="padding:5px 10px; background:#1b192b; border-bottom:1px solid var(--hl-med); font-family:var(--sans); font-size:11.5px; display:flex; justify-content:space-between; align-items:center; gap:6px;">
-        <span>发给：<b style="color:var(--rose);">${esc(activeTh.title)}</b></span>
-        ${wsData.threads.length > 1 ? `
-          <span style="display:flex; gap:4px;">
-            ${wsData.threads.map((th, ti) => `
-              <button class="btn btn-xs ${th.id === activeTh.id ? "active" : ""}" onclick="event.stopPropagation(); switchActiveThread('${th.id}')">#${ti + 1}</button>
-            `).join("")}
-          </span>
-        ` : `<span style="color:var(--muted); font-size:11px;">独立队列</span>`}
-      </div>
-    `;
-    const pendingAskBarHtml = state.pendingQuestion ? `
-      <div style="padding:6px 10px; background:rgba(246,193,119,0.12); border-bottom:1px solid rgba(246,193,119,0.4); font-family:var(--sans); font-size:11.5px; display:flex; justify-content:space-between; align-items:center; gap:6px;">
-        <span style="color:var(--gold);">⚠ AI 等你回答兼容策略问题（不强弹窗抢占编辑器）</span>
-        <button class="btn btn-xs btn-primary" onclick="event.stopPropagation(); openQuestionFloat()">打开回答 (Space ar)</button>
-      </div>
-    ` : "";
-
-    bodyHtml = `
-      ${threadBarHtml}
-      ${pendingAskBarHtml}
-      <div class="tui-win-body">
-        ${state.chat.map(m => `
-          <div class="chat-item">
-            <div class="chat-role"><span>${esc(m.role)}</span></div>
-            <div>${esc(m.text)} ${m.ref ? `<span class="file-ref" onclick="event.stopPropagation(); jumpToCode('${m.ref.file}', ${m.ref.line})">${esc(m.ref.file)}:${m.ref.line}</span>` : ""}</div>
+  const rowsHtml = visibleComments.map((c, idx) => {
+    const v = deriveCommentView(c);
+    const sideTag = c.side === "base" ? "Base" : "Mod";
+    const checkStr = c.persisted === "draft" ? `[${c.selected ? "x" : " "}]` : "   ";
+    return `
+      <div class="vlist-row ${state.dockIdx === idx ? "selected" : ""}" style="align-items:flex-start;"
+           onclick="event.stopPropagation(); state.focusedPane='dock'; state.dockIdx=${idx}; previewCommentById('${c.id}'); render();"
+           ondblclick="event.stopPropagation(); jumpToCommentById('${c.id}')">
+        <div style="min-width:0; width:100%;">
+          <div style="display:flex; justify-content:space-between; gap:6px;">
+            <span>
+              <span onclick="event.stopPropagation(); toggleCommentSelection('${c.id}')">${checkStr}</span>
+              <span class="tag ${v.tagCls}">${v.label}</span>
+              <span style="color:var(--subtle); margin-left:4px;">${sideTag}:L${c.line}</span>
+              ${c.anchor === "outdated" ? `<span style="color:var(--gold); margin-left:4px;">!原文已变</span>` : ""}
+            </span>
+            ${c.targetLabel ? `<span style="color:var(--foam); font-size:11px; cursor:pointer;" onclick="event.stopPropagation(); handleCommentAction('${c.id}','view_thread')" title="按 v 打开该评论所在的 Thread">查看 Thread →</span>` : ""}
           </div>
-        `).join("")}
-      </div>
-      ${queueStripHtml}
-      <div class="composer" onclick="event.stopPropagation()">
-        ${menuHtml}
-        ${state.composerRefs.length ? `<div style="font-size:11px; color:var(--foam);">引用: ${esc(state.composerRefs.join(", "))}</div>` : ""}
-        <textarea id="chatTextarea" placeholder="输入问题或指令（代码区按 Space a i 直接聚焦此处）…"
-          onfocus="state.focusedPane='dock';"
-          oninput="state.composerDraft=this.value"
-          onkeydown="onComposerKey(event)">${esc(state.composerDraft)}</textarea>
-        <div class="composer-bar">
-          ${keyHint}
-          <div style="display:flex; gap:5px; align-items:center;">
-            ${isRunning ? `<button class="btn btn-xs btn-stop" onclick="stopRunningThread()">Stop</button>` : ""}
-            <button class="btn btn-xs btn-primary" onclick="submitComposer('${!isRunning ? "send" : effMode}')">${primaryLabel}</button>
-            <button class="btn btn-xs" title="更多会话操作" onclick="state.composerMenuOpen=!state.composerMenuOpen; render();">⋯</button>
-          </div>
+          <div style="color:var(--text); margin-top:3px; padding-left:28px; white-space:normal; word-break:break-word; line-height:1.45;">${esc(c.text)}</div>
+          ${c.reply ? `<div style="color:var(--foam); margin-top:3px; padding-left:28px; white-space:normal; word-break:break-word; line-height:1.45;">↳ 回复：${esc(c.reply)}</div>` : ""}
         </div>
       </div>
     `;
-  }
+  }).join("");
 
   return `
     <div class="tui-win win-dock ${state.focusedPane === "dock" ? "focused" : ""}" onclick="state.focusedPane='dock'; render();">
       <div class="tui-winbar">
-        <span>Agent · ${MODELS[state.activeModelIdx].id}</span>
-        <button class="btn btn-xs btn-quiet" onclick="event.stopPropagation(); toggleDock()">隐藏</button>
+        <span>评论列表 (${visibleComments.length})</span>
+        <span class="wb-seg" onclick="event.stopPropagation(); toggleDock()" title="按 q 收起侧栏（Space a a 重新打开）">q 收起</span>
       </div>
-      <div class="dock-tabs">
-        ${tabs.map(([id, lbl]) => `
-          <div class="dock-tab ${state.dockTab === id ? "active" : ""}" onclick="event.stopPropagation(); state.dockTab='${id}'; render();">${lbl}</div>
-        `).join("")}
+      <div style="padding:6px 10px; border-bottom:1px solid var(--hl-med); background:#1d1b2d; font-size:11.5px; line-height:1.6;">
+        <div style="display:flex; justify-content:space-between; gap:6px;">
+          <span style="color:var(--muted);">发送到：</span>
+          <span class="wb-seg accent" onclick="event.stopPropagation(); openTargetPicker()">${esc(destName)} ▾ (按 t 切换)</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:2px;">
+          <span style="color:var(--muted);">已勾选 ${selectedDraftIds.length} 条草稿</span>
+          <span class="wb-seg ${selectedDraftIds.length ? "active" : ""}" style="${selectedDraftIds.length ? "" : "opacity:0.45;"}" onclick="event.stopPropagation(); dispatchComments(${JSON.stringify(selectedDraftIds).replace(/"/g, "'")}, false)">发送勾选草稿 (s)</span>
+        </div>
       </div>
-      ${bodyHtml}
+      <div class="tui-win-body">${rowsHtml}</div>
+      <div style="padding:4px 10px; border-top:1px solid var(--hl-med); color:var(--muted); font-size:11px;">
+        Space 勾选 · Enter 跳代码行 · e 编辑 · v 查看Thread · d 清理
+      </div>
+    </div>
+  `;
+}
+
+function renderThreadPane() {
+  const wsData = currentWsData();
+  const activeTh = currentThread();
+  const allQueued = [
+    ...state.queue.steering.map((it, idx) => ({ ...it, lane: "steering", idx, tag: "插话" })),
+    ...state.queue.followUp.map((it, idx) => ({ ...it, lane: "followUp", idx, tag: "后续" }))
+  ];
+  const firstQ = allQueued[0];
+  const isRunning = state.threadStatus === "running" || state.threadStatus === "needs_input";
+  const effMode = state.backend === "acp" ? "followUp" : state.runningEnterPref;
+  const primaryLabel = !isRunning ? "Send" : (effMode === "steer" ? "Steer" : "Follow-up");
+  const isComposerFocused = document.activeElement?.id === "chatTextarea";
+
+  const menuHtml = state.composerMenuOpen ? `
+    <div class="menu-pop" onclick="event.stopPropagation()">
+      ${isRunning && state.backend === "pi" ? `<div class="menu-row" onclick="submitComposer('steer')">↳ 下一步插话发送 (Steer)</div>` : ""}
+      ${isRunning && state.backend === "pi" ? `<div class="menu-row" onclick="submitComposer('interrupt')">⚡ 立即打断并改做 (Interrupt)</div>` : ""}
+      ${state.backend === "pi" ? `<div class="menu-row" onclick="runCompact()">🗜 压缩上下文 (Compact)</div>` : ""}
+      <div class="menu-row" onclick="state.composerMenuOpen=false; openModelFloat();">⚙ 切换模型 (${esc(MODELS[state.activeModelIdx].id)})</div>
+      <div class="menu-row" onclick="state.composerMenuOpen=false; openThreadTree();">🌿 分支树 (Thread Tree)</div>
+    </div>
+  ` : "";
+
+  const threadTabsHtml = wsData.threads.map((th, ti) => `
+    <span class="wb-seg ${th.id === activeTh.id ? "active" : ""}" onclick="event.stopPropagation(); switchActiveThread('${th.id}')">#${ti + 1} ${esc(th.title)}</span>
+  `).join(" ");
+
+  const pendingAskHtml = state.pendingQuestion ? `
+    <div class="md-line" style="color:var(--gold); background:rgba(246,193,119,0.1); border-bottom:1px solid rgba(246,193,119,0.35);">
+      ⚠ AI 等你确认兼容策略 · <span class="wb-seg warn" onclick="event.stopPropagation(); openQuestionFloat()">Space ar 打开回答浮窗</span>
+    </div>
+  ` : "";
+
+  const planMdHtml = activeTh.plan?.length ? `
+    <div class="md-line" style="border-bottom:1px solid var(--hl-med); padding-bottom:6px;">
+      <div class="md-h2">## Plan</div>
+      ${activeTh.plan.map((item, i) => `
+        <div style="color:${item.state === "active" ? "var(--text)" : "var(--subtle)"};">
+          - [${item.state === "done" ? "x" : item.state === "active" ? ">" : " "}] ${i + 1}. ${esc(item.text)}
+        </div>
+      `).join("")}
+    </div>
+  ` : "";
+
+  return `
+    <div class="thread-stack" style="position:relative;">
+      ${menuHtml}
+      <div class="tui-win thread-main ${state.focusedPane === "thread" && !isComposerFocused ? "focused" : ""}" style="flex:1;"
+           onclick="state.focusedPane='thread'; render();">
+        <div class="tui-winbar">
+          <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+            <span>pide://thread/${esc(activeTh.id)}</span>
+            <span class="wb-sep">│</span>
+            ${threadTabsHtml}
+          </span>
+          <span style="flex-shrink:0;">
+            <span class="wb-seg" onclick="event.stopPropagation(); newIndependentThread()">n +Thread</span>
+            <span class="wb-sep">·</span>
+            <span class="wb-seg" onclick="event.stopPropagation(); forkActiveThread()">f Fork</span>
+            <span class="wb-sep">·</span>
+            <span class="wb-seg" onclick="event.stopPropagation(); splitActiveThreadWithSkill()">s 拆分</span>
+            <span class="wb-sep">·</span>
+            <span class="wb-seg" onclick="event.stopPropagation(); openMergeView()">m Merge</span>
+            <span class="wb-sep">·</span>
+            <span class="wb-seg ${state.dockOpen ? "active" : "accent"}" onclick="event.stopPropagation(); toggleDock()" title="展开/收起右侧评论栏">评论(${filteredComments().length})</span>
+            <span class="wb-sep">·</span>
+            <span class="wb-seg" onclick="event.stopPropagation(); popCenterView()">q 返回代码</span>
+          </span>
+        </div>
+        <div class="tui-win-body">
+          ${pendingAskHtml}
+          ${planMdHtml}
+          ${state.chat.map(m => `
+            <div class="chat-item">
+              <div class="md-h2">### ${esc(m.role)}</div>
+              <div>${esc(m.text)} ${m.ref ? `<span class="file-ref" onclick="event.stopPropagation(); jumpToCode('${m.ref.file}', ${m.ref.line})">${esc(m.ref.file)}:${m.ref.line}</span>` : ""}</div>
+            </div>
+          `).join("")}
+        </div>
+      </div>
+
+      <div class="tui-win win-composer ${isComposerFocused ? "focused" : ""}" onclick="event.stopPropagation(); focusChatInput();">
+        <div class="tui-winbar">
+          <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+            <span>pide://composer/${esc(activeTh.id)} · ${esc(MODELS[state.activeModelIdx].id)}</span>
+            ${state.composerRefs.length ? `<span style="color:var(--foam); margin-left:8px;">refs: ${esc(state.composerRefs.join(", "))}</span>` : ""}
+            ${firstQ ? `<span style="color:var(--foam); margin-left:8px;">[${firstQ.tag}${allQueued.length > 1 ? `+${allQueued.length - 1}` : ""}: ${esc(firstQ.text)}]</span>` : ""}
+          </span>
+          <span style="flex-shrink:0;">
+            ${firstQ ? `<span class="wb-seg accent" onclick="event.stopPropagation(); withdrawQueueItem('${firstQ.lane}', ${firstQ.idx})">r 撤回</span><span class="wb-sep">·</span><span class="wb-seg" onclick="event.stopPropagation(); toggleShelf('queue')">队列(${allQueued.length})</span><span class="wb-sep">·</span>` : ""}
+            ${isRunning ? `<span class="wb-seg danger" onclick="event.stopPropagation(); stopRunningThread()">Stop</span><span class="wb-sep">·</span>` : ""}
+            <span class="wb-seg accent" onclick="event.stopPropagation(); submitComposer('${!isRunning ? "send" : effMode}')">CR ${primaryLabel}</span>
+            <span class="wb-sep">·</span>
+            <span class="wb-seg" onclick="event.stopPropagation(); state.composerMenuOpen=!state.composerMenuOpen; render();">⋯</span>
+          </span>
+        </div>
+        <textarea id="chatTextarea" class="composer-buf" placeholder="i 进入插入模式输入多行指令（Enter 发送，Shift+Enter 换行，Esc 回只读会话窗）…"
+          onfocus="state.focusedPane='thread';"
+          oninput="state.composerDraft=this.value"
+          onkeydown="onComposerKey(event)">${esc(state.composerDraft)}</textarea>
+      </div>
     </div>
   `;
 }
@@ -2560,27 +2589,26 @@ function renderShelf() {
   if (!state.shelfOpen) return;
 
   const qTotal = state.queue.steering.length + state.queue.followUp.length;
-  const dest = SEND_TARGETS.find(t => t.id === state.commentTargetId) || SEND_TARGETS[0];
+  const dest = sendTargetById(state.commentTargetId);
   let rowsHtml = "";
 
   if (state.shelfTab === "comments") {
-    rowsHtml = state.comments.map((c, i) => {
+    rowsHtml = filteredComments().map((c, i) => {
       const v = deriveCommentView(c);
       const sideStr = c.side === "base" ? "Base" : "Mod";
+      const checkStr = c.persisted === "draft" ? `[${c.selected ? "x" : " "}]` : "   ";
       return `
         <div class="vlist-row ${state.shelfIdx === i ? "selected" : ""}"
-             onclick="state.focusedPane='shelf'; state.shelfIdx=${i}; previewCommentById('${c.id}'); render();">
+             onclick="state.focusedPane='shelf'; state.shelfIdx=${i}; previewCommentById('${c.id}'); render();"
+             ondblclick="event.stopPropagation(); jumpToCommentById('${c.id}')">
           <div style="min-width:0;">
-            <span class="mono">[${c.selected && c.persisted === "draft" ? "x" : " "}] ${sideStr}:L${c.line}</span>
+            <span>${checkStr} ${sideStr}:L${c.line}</span>
             <span class="tag ${v.tagCls}" style="margin:0 5px;">${v.label}</span>
-            ${c.targetLabel ? `<span class="tag tag-dim">→ ${esc(c.targetLabel)}</span> ` : ""}
-            ${c.anchor === "outdated" ? `<span class="tag tag-gold">原文已变</span> ` : ""}
+            ${c.targetLabel ? `<span style="color:var(--foam); cursor:pointer;" onclick="event.stopPropagation(); handleCommentAction('${c.id}','view_thread')">→ ${esc(c.targetLabel)}</span> ` : ""}
+            ${c.anchor === "outdated" ? `<span style="color:var(--gold);">!原文已变</span> ` : ""}
             <span>${esc(c.text)}</span>
           </div>
-          <div style="display:flex; gap:4px; flex-shrink:0;">
-            <button class="btn btn-xs btn-quiet" onclick="event.stopPropagation(); jumpToCommentById('${c.id}')" title="跳转光标到代码窗口 (o)">定位</button>
-            ${renderActionButtons(c)}
-          </div>
+          <span style="color:var(--muted); font-size:11px; flex-shrink:0;">CR定位${c.targetThreadId ? " · v会话" : ""} · d清理</span>
         </div>
       `;
     }).join("");
@@ -2592,11 +2620,11 @@ function renderShelf() {
     rowsHtml = items.length ? items.map((it, i) => `
       <div class="vlist-row ${state.shelfIdx === i ? "selected" : ""}" onclick="state.focusedPane='shelf'; state.shelfIdx=${i}; render();">
         <div><span class="tag tag-foam">${it.label}</span> <span style="margin-left:6px;">${esc(it.text)}</span></div>
-        <button class="btn btn-xs" onclick="event.stopPropagation(); withdrawQueueItem('${it.lane}', ${it.idx})">撤回编辑 (r)</button>
+        <span class="wb-seg accent" onclick="event.stopPropagation(); withdrawQueueItem('${it.lane}', ${it.idx})">r 撤回</span>
       </div>
-    `).join("") : `<div style="padding:8px 12px; color:var(--muted); font-family:var(--sans);">当前无待消费的排队消息</div>`;
+    `).join("") : `<div style="padding:8px 12px; color:var(--muted);">当前无待消费的排队消息</div>`;
   } else {
-    rowsHtml = `<div style="padding:8px 12px; color:var(--muted); font-family:var(--sans);">复用 Neovim 原生诊断与终端。</div>`;
+    rowsHtml = `<div style="padding:8px 12px; color:var(--muted);">复用 Neovim 原生诊断与终端。</div>`;
   }
 
   const selectedDraftIds = state.comments.filter(c => c.selected && c.persisted === "draft").map(c => c.id);
@@ -2605,17 +2633,18 @@ function renderShelf() {
   shelf.innerHTML = `
     <div class="shelf-header" onclick="state.focusedPane='shelf'; render();">
       <div style="display:flex; gap:12px; align-items:center;">
-        <span style="cursor:pointer; color:${state.shelfTab==='comments'?'var(--rose)':'var(--muted)'};" onclick="event.stopPropagation(); state.shelfTab='comments'; state.shelfIdx=0; render();">评论架 (${state.comments.length})</span>
-        <span style="cursor:pointer; color:${state.shelfTab==='queue'?'var(--rose)':'var(--muted)'};" onclick="event.stopPropagation(); state.shelfTab='queue'; state.shelfIdx=0; render();">排队消息 (${qTotal})</span>
-        <span style="cursor:pointer; color:${state.shelfTab==='diagnostics'?'var(--rose)':'var(--muted)'};" onclick="event.stopPropagation(); state.shelfTab='diagnostics'; render();">诊断</span>
+        <span style="cursor:pointer; color:${state.shelfTab==='comments'?'var(--rose)':'var(--muted)'};" onclick="event.stopPropagation(); state.shelfTab='comments'; state.shelfIdx=0; render();">1 评论架 (${filteredComments().length})</span>
+        <span style="cursor:pointer; color:${state.shelfTab==='queue'?'var(--rose)':'var(--muted)'};" onclick="event.stopPropagation(); state.shelfTab='queue'; state.shelfIdx=0; render();">2 排队消息 (${qTotal})</span>
+        <span style="cursor:pointer; color:${state.shelfTab==='diagnostics'?'var(--rose)':'var(--muted)'};" onclick="event.stopPropagation(); state.shelfTab='diagnostics'; render();">3 诊断</span>
       </div>
       <div style="display:flex; align-items:center; gap:6px;">
         ${state.shelfTab === "comments" ? `
-          <button class="btn btn-xs" onclick="event.stopPropagation(); openTargetPicker()" title="按 t 选择批量发送目标">批量目标：${esc(destShortLabel)} ▾ (t)</button>
-          <button class="btn btn-xs btn-primary" style="${selectedDraftIds.length === 0 ? "opacity:0.45;" : ""}" onclick="event.stopPropagation(); dispatchComments(${JSON.stringify(selectedDraftIds).replace(/"/g, "'")}, false)">发送已勾选 (${selectedDraftIds.length}) → ${esc(destShortLabel)}</button>
+          <span class="wb-seg accent" onclick="event.stopPropagation(); openTargetPicker()" title="按 t 选择发送目标">发送到：${esc(destShortLabel)} ▾ (t)</span>
+          <span class="wb-sep">·</span>
+          <span class="wb-seg ${selectedDraftIds.length ? "active" : ""}" style="${selectedDraftIds.length === 0 ? "opacity:0.45;" : ""}" onclick="event.stopPropagation(); dispatchComments(${JSON.stringify(selectedDraftIds).replace(/"/g, "'")}, false)">发送已勾选 ${selectedDraftIds.length} 条 (s)</span>
+          <span class="wb-sep">·</span>
         ` : ""}
-        <span style="color:var(--muted); font-size:11px;"><kbd>j</kbd><kbd>k</kbd> · <kbd>Space</kbd> 勾选 · <kbd>t</kbd> 目标 · <kbd>Enter</kbd> 发送 · <kbd>q</kbd> 收起</span>
-        <button class="btn btn-xs btn-quiet" onclick="event.stopPropagation(); toggleShelf()">×</button>
+        <span class="wb-seg" onclick="event.stopPropagation(); toggleShelf()">q 收起</span>
       </div>
     </div>
     <div class="tui-win-body">${rowsHtml}</div>
@@ -2624,32 +2653,48 @@ function renderShelf() {
 
 function renderStatusAndCmd() {
   const ws = currentWs();
-  const drafts = state.comments.filter(c => c.persisted === "draft").length;
-  const processing = state.comments.filter(c => deriveCommentView(c).key === "processing").length;
-  const pendingAck = state.comments.filter(c => deriveCommentView(c).key === "pending_ack").length;
-  const queued = state.queue.steering.length + state.queue.followUp.length;
-  const modeStr = state.visualAnchor !== null ? "VISUAL" : "NORMAL";
+  const visual = state.visualAnchor !== null;
+  const modeStr = visual ? "VISUAL" : "NORMAL";
   const sideBadge = state.centerMode === "diff" ? ` [${state.diffSide === "base" ? "Base" : "Modified"}]` : "";
+  const bufferLabel = state.centerMode === "thread"
+    ? `pide://thread/${currentThread().id}`
+    : `${ws.file}${sideBadge}${state.bufferModified ? " [+]" : ""} · L${activeCursorLine()}`;
 
   document.getElementById("tuiStatusline").innerHTML = `
-    <div>
-      <b style="color:var(--rose);">${modeStr}</b>
-      <span style="margin-left:10px;">${esc(ws.file)}${sideBadge}${state.bufferModified ? " [+]" : ""} · L${activeCursorLine()}</span>
-    </div>
-    <div style="display:flex; gap:12px; align-items:center;">
-      <span>草稿: <b>${drafts}</b></span>
-      ${processing ? `<span style="color:var(--iris);">处理中: <b>${processing}</b></span>` : ""}
-      ${pendingAck ? `<span style="color:var(--rose);">待确认: <b>${pendingAck}</b></span>` : ""}
-      <span>排队: <b>${queued}</b></span>
-      <span style="color:${ws.verified ? "var(--foam)" : "var(--muted)"};">${ws.verified ? "已验证 ✓" : "未验证"}</span>
-    </div>
+    <span class="status-left">
+      <b class="status-mode">${modeStr}</b>
+      <span class="status-file">${esc(bufferLabel)}</span>
+    </span>
+    <span class="status-thread">${esc(currentThread().title)}</span>
   `;
 
-  const chordHint = leaderSeq === "space" ? "<Space>…" : leaderSeq === "space_a" ? "<Space>a…" : `焦点: ${state.focusedPane}`;
+  const [selS, selE] = getSelectionRange();
+  const commandMessage = visual ? `-- VISUAL LINE --  L${selS}${selE > selS ? "–" + selE : ""}` : state.statusNotice;
+  const chordHint = leaderSeq === "space" ? "<Space>…" : leaderSeq === "space_a" ? "<Space>a…" : "";
   document.getElementById("tuiCmdline").innerHTML = `
-    <span>${esc(state.statusNotice)}</span>
+    <span>${esc(commandMessage)}</span>
     <span style="color:var(--iris);">${esc(chordHint)}</span>
   `;
+  renderLeaderGuide();
+}
+
+function renderLeaderGuide() {
+  const guide = document.getElementById("tuiLeaderGuide");
+  guide.classList.toggle("hidden", !leaderSeq);
+  if (!leaderSeq) {
+    guide.innerHTML = "";
+    return;
+  }
+  guide.innerHTML = leaderSeq === "space"
+    ? `<div class="leader-guide-title">Space</div><div class="leader-guide-grid"><span><b>a</b> pide</span></div>`
+    : `<div class="leader-guide-title">Space a</div>
+       <div class="leader-guide-grid">
+         <span><b>c</b> 评论</span><span><b>v</b> 看Thread</span><span><b>i</b> Thread</span><span><b>s/S</b> 发送/Steer</span><span><b>d</b> Diff</span>
+         <span><b>b</b> 新旧侧</span><span><b>l</b> 评论架</span><span><b>q</b> Queue</span>
+         <span><b>a</b> 评论栏</span><span><b>n</b> 导航</span><span><b>w</b> Workspace</span>
+         <span><b>t</b> Thread Tree</span><span><b>m</b> Merge</span><span><b>r</b> 回答</span>
+         <span><b>M</b> 模型</span>
+       </div>`;
 }
 
 function renderOverlay() {
@@ -2690,14 +2735,11 @@ function renderOverlay() {
     ovWrap.innerHTML = `
       <div class="nvim-scratch">
         <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
-          <b>${ov.purpose === "merge" ? "编辑合并摘要 (可编辑 Buffer)" : `多行评论 Buffer (${ov.side === "base" ? "Base" : "Modified"} L${ov.line})`}</b>
-          <span style="color:var(--muted); font-size:11px;">关闭后归还焦点至 ${esc(ov.returnPane)}</span>
+          <b>${ov.purpose === "merge" ? "pide://scratch/merge-summary.md" : `pide://scratch/comment (${ov.side === "base" ? "Base" : "Modified"} L${ov.line})`}</b>
+          <span style="color:var(--muted); font-size:11px;">Ctrl+S / :wq 保存 · Esc 放弃</span>
         </div>
-        <textarea id="overlayInput" style="width:100%; min-height:110px; background:var(--canvas); border:1px solid var(--hl-high); border-radius:5px; padding:8px; font-family:var(--mono);">${esc(ov.text)}</textarea>
-        <div style="display:flex; justify-content:flex-end; gap:6px; margin-top:8px;">
-          <button class="btn btn-xs" onclick="closeOverlay()">放弃 (Esc)</button>
-          <button class="btn btn-xs btn-primary" onclick="commitScratch()">保存并恢复焦点 (:wq)</button>
-        </div>
+        <textarea id="overlayInput" style="width:100%; min-height:110px; background:var(--canvas); border:1px solid var(--hl-high); border-radius:4px; padding:8px;"
+                  onkeydown="if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='s'){event.preventDefault(); commitScratch();} if(event.key==='Escape'){event.preventDefault(); closeOverlay();}">${esc(ov.text)}</textarea>
       </div>
     `;
   } else if (ov.type === "target_picker") {
@@ -2727,7 +2769,7 @@ function renderOverlay() {
         ${list.map((w, i) => `
           <div class="vlist-row ${ov.idx === i ? "selected" : ""}" onclick="applyWorkspaceChoice('${w.id}', false)">
             <span><b>${esc(w.name)}</b> · <span style="color:var(--subtle);">${esc(w.kind)}</span></span>
-            <button class="btn btn-xs" onclick="event.stopPropagation(); applyWorkspaceChoice('${w.id}', true)">新 Tab 打开 (t)</button>
+            <span class="wb-seg" onclick="event.stopPropagation(); applyWorkspaceChoice('${w.id}', true)">t 新Tab</span>
           </div>
         `).join("")}
       </div>
@@ -2736,7 +2778,7 @@ function renderOverlay() {
     ovWrap.innerHTML = `
       <div class="nvim-float">
         <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
-          <b>切换当前会话模型</b>
+          <b>切换当前 Thread 模型</b>
           <span style="color:var(--muted); font-size:11px;"><kbd>j</kbd><kbd>k</kbd> 移动 · <kbd>Enter</kbd> 确认 · <kbd>Esc</kbd> 关闭</span>
         </div>
         ${MODELS.map((m, i) => `
@@ -2756,20 +2798,16 @@ function renderOverlay() {
       <div class="nvim-float">
         <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
           <b>需要你的确认 · 鉴权兼容方案对比</b>
-          <span class="tag tag-gold">j/k/1/2 选择 · Enter 确认</span>
+          <span style="color:var(--muted); font-size:11px;">j/k/1/2 选择 · Enter 确认 · Esc 稍后</span>
         </div>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:8px 0;">
+        <div style="display:flex; flex-direction:column; gap:4px; margin-top:6px;">
           ${opts.map((o, i) => `
-            <div style="padding:8px; border-radius:6px; cursor:pointer; background:var(--base); border:1px solid ${ov.idx===i?'var(--foam)':'var(--hl-med)'};"
+            <div class="vlist-row ${ov.idx === i ? "selected" : ""}" style="align-items:flex-start; flex-direction:column; gap:2px;"
                  onclick="state.overlay.idx=${i}; confirmQuestion();">
-              <div style="font-weight:600; font-size:12px;">[${i + 1}] ${esc(o[0])}</div>
-              <div class="mono" style="font-size:11px; color:var(--foam); margin-top:4px;">${esc(o[1])}</div>
+              <div><b>[${i + 1}] ${esc(o[0])}</b></div>
+              <div style="color:var(--foam); padding-left:20px;">${esc(o[1])}</div>
             </div>
           `).join("")}
-        </div>
-        <div style="display:flex; justify-content:flex-end; gap:6px;">
-          <button class="btn btn-xs" onclick="closeOverlay()">稍后 (Esc)</button>
-          <button class="btn btn-xs btn-primary" onclick="confirmQuestion()">确认 (Enter)</button>
         </div>
       </div>
     `;
@@ -2784,23 +2822,6 @@ function commitScratch() {
   } else {
     saveCommentFromOverlay(val);
   }
-}
-
-function renderDebug() {
-  if (!state.debugOpen) return;
-  document.getElementById("colsLabel").textContent = state.totalCols;
-  document.getElementById("effColsLabel").textContent = effectiveCodeCols();
-  document.getElementById("backendLabel").textContent = state.backend === "pi" ? "Pi" : "ACP";
-  document.getElementById("enterPrefLabel").textContent = state.runningEnterPref === "followUp" ? "Follow-up" : "Steer";
-
-  document.getElementById("debugKv").innerHTML = `
-    focused = ${state.focusedPane} | center = ${state.centerMode} | stack = [${state.viewStack.map(v=>v.centerMode).join("→")}]<br/>
-    diff_side = ${state.diffSide} | eff_cols = ${effectiveCodeCols()} (${isNarrowForReview() ? "窄屏单处评论" : "宽屏三栏"})<br/>
-    target = ${state.commentTargetId} | running_enter = ${state.runningEnterPref}
-  `;
-  document.getElementById("debugLogs").innerHTML = state.logs.map(l => `
-    <div class="log-row ${l.kind}">${esc(l.text)}</div>
-  `).join("");
 }
 
 /* ==================== SCOPED NEOVIM KEYBOARD ENGINE ==================== */
@@ -2820,8 +2841,8 @@ function onComposerKey(e) {
   if (e.key === "Escape") {
     e.preventDefault();
     e.target.blur();
-    state.focusedPane = "code";
-    state.statusNotice = "已退出输入框回到代码区";
+    state.focusedPane = state.centerMode === "thread" ? "thread" : "code";
+    state.statusNotice = "已退出输入框";
     render();
     return;
   }
@@ -2871,7 +2892,8 @@ document.addEventListener("keydown", (e) => {
     return;
   }
 
-  // 2. Standard Window Navigation (<C-w>h/j/k/l in Neovim; Ctrl+h/j/k/l in browser sandbox)
+  // 2. Browser-sandbox convenience only (not part of the spec): <C-w>h/j/k/l is native
+  //    Neovim and pide registers no window keys; the browser maps it to Ctrl+h/j/k/l.
   if (e.ctrlKey && ["h", "j", "k", "l"].includes(e.key)) {
     e.preventDefault();
     resetLeaderSeq();
@@ -2898,6 +2920,7 @@ document.addEventListener("keydown", (e) => {
     e.preventDefault();
     if (e.key === "c") openCommentCreator(false);
     else if (e.key === "C") openCommentCreator(true);
+    else if (e.key === "v") openCurrentLineCommentThread();
     else if (e.key === "s") sendFromCode(false);
     else if (e.key === "S") sendFromCode(true);
     else if (e.key === "d") enterDiffReview();
@@ -2931,24 +2954,21 @@ document.addEventListener("keydown", (e) => {
   // 4. Plugin Read-Only Buffers ONLY: local short keys (j/k/Space/Enter/p/t/r/d/q)
   if (state.focusedPane === "shelf" && state.shelfOpen) {
     if (state.shelfTab === "comments") {
-      const c = state.comments[state.shelfIdx];
-      if (e.key === "j") { state.shelfIdx = Math.min(state.comments.length - 1, state.shelfIdx + 1); previewCommentLocation(state.comments[state.shelfIdx]); render(); }
-      else if (e.key === "k") { state.shelfIdx = Math.max(0, state.shelfIdx - 1); previewCommentLocation(state.comments[state.shelfIdx]); render(); }
+      const list = filteredComments();
+      const c = list[state.shelfIdx];
+      if (e.key === "j") { state.shelfIdx = Math.min(list.length - 1, state.shelfIdx + 1); previewCommentLocation(list[state.shelfIdx]); render(); }
+      else if (e.key === "k") { state.shelfIdx = Math.max(0, state.shelfIdx - 1); previewCommentLocation(list[state.shelfIdx]); render(); }
+      else if (e.key === "e" && c && c.persisted === "draft") { openCommentCreator(false, c.id); }
+      else if (e.key === "v" && c && c.persisted !== "draft") { handleCommentAction(c.id, "view_thread"); }
       else if (e.key === "o") { if (c) jumpToCommentLocation(c); }
       else if (e.key === " ") { e.preventDefault(); if (c && c.persisted === "draft") { c.selected = !c.selected; render(); } }
       else if (e.key === "t") { openTargetPicker(); }
       else if (e.key === "d" && c) { handleCommentAction(c.id, "dismiss"); }
-      else if (e.key === "r" && c) {
-        const v = deriveCommentView(c);
-        if (v.key === "pending_ack") handleCommentAction(c.id, "resolve");
-        else if (v.key === "resolved") handleCommentAction(c.id, "reopen");
-        else if (v.key === "queued") handleCommentAction(c.id, "withdraw");
-      } else if (e.key === "Enter") {
+      else if ((e.key === "s" || e.key === "S")) {
         const ids = state.comments.filter(x => x.selected && x.persisted === "draft").map(x => x.id);
-        dispatchComments(ids, false);
-      } else if (e.key === "S") {
-        const ids = state.comments.filter(x => x.selected && x.persisted === "draft").map(x => x.id);
-        dispatchComments(ids, true);
+        dispatchComments(ids, e.key === "S");
+      } else if (e.key === "Enter" && c) {
+        jumpToCommentLocation(c);
       } else if (e.key === "q") { toggleShelf(); }
     } else if (state.shelfTab === "queue") {
       const total = state.queue.steering.length + state.queue.followUp.length;
@@ -2969,31 +2989,52 @@ document.addEventListener("keydown", (e) => {
     if (e.key === "j") { state.leftNavIdx = Math.min(Math.max(0, maxLen - 1), state.leftNavIdx + 1); render(); }
     else if (e.key === "k") { state.leftNavIdx = Math.max(0, state.leftNavIdx - 1); render(); }
     else if (e.key === "Enter" && state.leftNavKind === "workspaces") applyWorkspaceChoice(wsIds[state.leftNavIdx] || "auth", false);
-    else if (e.key === "Enter" && state.leftNavKind === "threads" && ths[state.leftNavIdx]) switchActiveThread(ths[state.leftNavIdx].id);
+    else if (e.key === "Enter" && state.leftNavKind === "threads" && ths[state.leftNavIdx]) { switchActiveThread(ths[state.leftNavIdx].id); openActiveThread(); }
     else if (e.key === "t" && state.leftNavKind === "workspaces") applyWorkspaceChoice(wsIds[state.leftNavIdx] || "auth", true);
     else if (e.key === "q") toggleLeftNav();
     return;
   }
 
+  if (state.centerMode === "thread" && state.focusedPane === "thread") {
+    if (e.key === "q") popCenterView();
+    else if (e.key === "i") focusChatInput();
+    else if (e.key === "n") newIndependentThread();
+    else if (e.key === "f") forkActiveThread();
+    else if (e.key === "s") splitActiveThreadWithSkill();
+    else if (e.key === "m") openMergeView();
+    else if (e.key === "r") {
+      if (state.queue.steering.length) withdrawQueueItem("steering", 0);
+      else if (state.queue.followUp.length) withdrawQueueItem("followUp", 0);
+    }
+    else if (e.key === "a" || e.key === "2") { toggleDock(); }
+    else if (e.key === "1") { state.dockOpen = false; render(); }
+    else if (e.key === "Tab") {
+      e.preventDefault();
+      const ths = currentWsData().threads;
+      const idx = ths.findIndex(t => t.id === currentWsData().activeThreadId);
+      const direction = e.shiftKey ? -1 : 1;
+      switchActiveThread(ths[(idx + direction + ths.length) % ths.length].id);
+    }
+    return;
+  }
+
   if (state.focusedPane === "dock" && state.dockOpen) {
-    if (e.key === "i" && state.dockTab === "chat") { e.preventDefault(); focusChatInput(); return; }
     if (state.dockTab === "review") {
-      const list = state.comments.filter(x => x.persisted !== "dismissed");
+      const list = filteredComments();
       const c = list[state.dockIdx];
       if (e.key === "j") { state.dockIdx = Math.min(Math.max(0, list.length - 1), state.dockIdx + 1); previewCommentLocation(list[state.dockIdx]); render(); }
       else if (e.key === "k") { state.dockIdx = Math.max(0, state.dockIdx - 1); previewCommentLocation(list[state.dockIdx]); render(); }
+      else if (e.key === " ") { e.preventDefault(); if (c) toggleCommentSelection(c.id); }
+      else if (e.key === "e" && c && c.persisted === "draft") openCommentCreator(false, c.id);
       else if (e.key === "t") openTargetPicker();
-      else if (e.key === "S") {
-        const draftIds = state.comments.filter(x => x.persisted === "draft").map(x => x.id);
-        dispatchComments(c && c.persisted === "draft" ? [c.id] : draftIds, true);
+      else if (e.key === "s" || e.key === "S") {
+        const ids = state.comments.filter(x => x.selected && x.persisted === "draft").map(x => x.id);
+        dispatchComments(ids, e.key === "S");
       }
-      else if (e.key === "Enter" && c) jumpToCommentLocation(c);
-      else if (e.key === "r" && c) {
-        const v = deriveCommentView(c);
-        if (v.key === "pending_ack") handleCommentAction(c.id, "resolve");
-        else if (v.key === "resolved") handleCommentAction(c.id, "reopen");
-        else if (v.key === "queued") handleCommentAction(c.id, "withdraw");
-      } else if (e.key === "q") { state.focusedPane = "code"; render(); }
+      else if (e.key === "v" && c && c.persisted !== "draft") handleCommentAction(c.id, "view_thread");
+      else if (e.key === "d" && c) handleCommentAction(c.id, "dismiss");
+      else if ((e.key === "Enter" || e.key === "o") && c) jumpToCommentLocation(c);
+      else if (e.key === "q") { state.focusedPane = state.centerMode === "thread" ? "thread" : "code"; render(); }
     }
     return;
   }
@@ -3038,7 +3079,7 @@ document.addEventListener("keydown", (e) => {
     state.visualAnchor = state.visualAnchor === null ? activeCursorLine() : null;
     render();
   } else if (["c", "C", "r", "g"].includes(e.key)) {
-    state.statusNotice = `原生 Vim 键 '${e.key}' 未被覆盖 · pide 操作请按 Space a …（如 Space a c 评论，Space a s 发送）`;
+    state.statusNotice = `原生 Vim 键 '${e.key}' 未被覆盖 · pide 操作请按 Space a …（Space a c 评论，Space a i 打开 Thread）`;
     renderStatusAndCmd();
   }
 });
